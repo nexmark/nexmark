@@ -24,6 +24,7 @@ jobmanager.rpc.port: 6123
 jobmanager.memory.process.size: 4096M
 taskmanager.numberOfTaskSlots: 1
 parallelism.default: 8
+io.tmp.dirs: /tmp
 #==============================================================================
 # JVM
 #==============================================================================
@@ -81,6 +82,7 @@ taskmanager.network.request-backoff.max: 300000
 
 state.backend: rocksdb
 state.checkpoints.dir: file:///path/to/checkpoint
+state.backend.rocksdb.localdir: /tmp
 state.backend.incremental: true
 execution.checkpointing.interval: 180000
 execution.checkpointing.mode: EXACTLY_ONCE

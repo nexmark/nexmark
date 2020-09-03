@@ -170,7 +170,7 @@ public class Benchmark {
 		int itemMaxLength = 20;
 		System.err.println();
 		printLine('-', "+", itemMaxLength, "", "", "", "");
-		printLine(' ', "|", itemMaxLength, " Nexmark Query", " TPS (r/s)", " Cores", " TPS/Cores");
+		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores");
 		printLine('-', "+", itemMaxLength, "", "", "", "");
 
 		for (Map.Entry<String, BenchmarkMetric> entry : totalMetrics.entrySet()) {

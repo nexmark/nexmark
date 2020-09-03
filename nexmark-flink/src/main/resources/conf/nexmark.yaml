@@ -33,18 +33,23 @@ nexmark.metric.reporter.port: 9098
 # Benchmark workload configuration
 #==============================================================================
 
-nexmark.workload.suite.8m.tps: 8000000
-nexmark.workload.suite.8m.queries: "q0,q1,q2,q10,q12,q13,q14"
+nexmark.workload.suite.10m.tps: 10000000
+nexmark.workload.suite.10m.queries: "q0,q1,q2,q3,q4,q5,q7,q8,q9,q10,q11,q12,q13,q14,q15"
 
-nexmark.workload.suite.2m-no-bid.tps: 2000000
-nexmark.workload.suite.2m-no-bid.percentage: "bid:0, auction:9, person:1"
-nexmark.workload.suite.2m-no-bid.queries: "q3,q8"
+# Set different workload for group of queries
 
-nexmark.workload.suite.2m.tps: 2000000
-nexmark.workload.suite.2m.queries: "q5,q15"
+#nexmark.workload.suite.8m.tps: 8000000
+#nexmark.workload.suite.8m.queries: "q0,q1,q2,q10,q12,q13,q14"
 
-nexmark.workload.suite.1m.tps: 1000000
-nexmark.workload.suite.1m.queries: "q4,q7,q9,q11"
+#nexmark.workload.suite.2m-no-bid.tps: 2000000
+#nexmark.workload.suite.2m-no-bid.percentage: "bid:0, auction:9, person:1"
+#nexmark.workload.suite.2m-no-bid.queries: "q3,q8"
+
+#nexmark.workload.suite.2m.tps: 2000000
+#nexmark.workload.suite.2m.queries: "q5,q15"
+
+#nexmark.workload.suite.1m.tps: 1000000
+#nexmark.workload.suite.1m.queries: "q4,q7,q9,q11"
 
 #==============================================================================
 # Flink REST

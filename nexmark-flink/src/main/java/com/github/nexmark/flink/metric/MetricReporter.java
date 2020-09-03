@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * A reporter to aggregate metrics and report summary results.
@@ -132,50 +131,20 @@ public class MetricReporter {
 		double sumTps = 0.0;
 		double sumCpu = 0.0;
 
-		List<Double> tpsList = normalizeMetrics(metrics.stream()
-			.map(BenchmarkMetric::getTps)
-			.collect(Collectors.toList()));
-		List<Double> cpuList = normalizeMetrics(metrics.stream()
-			.map(BenchmarkMetric::getCpu)
-			.collect(Collectors.toList()));
-
-		for (Double tps : tpsList) {
-			sumTps += tps;
+		for (BenchmarkMetric metric : metrics) {
+			sumTps += metric.getTps();
+			sumCpu += metric.getCpu();
 		}
 
-		for (Double cpu : cpuList) {
-			sumCpu += cpu;
-		}
-
-		double avgTps = sumTps / tpsList.size();
-		double avgCpu = sumCpu / cpuList.size();
+		double avgTps = sumTps / metrics.size();
+		double avgCpu = sumCpu / metrics.size();
 		BenchmarkMetric metric = new BenchmarkMetric(avgTps, avgCpu);
-		String message = String.format("Summary Average: TPS=%s, Cores=%s",
+		String message = String.format("Summary Average: Throughput=%s, Cores=%s",
 			metric.getPrettyTps(),
 			metric.getPrettyCpu());
 		System.out.println(message);
 		LOG.info(message);
 		return metric;
-	}
-
-	private List<Double> normalizeMetrics(List<Double> list) {
-		List<Double> temp = new ArrayList<>();
-		double min = 0;
-		for (Double d : list) {
-			// drop dirty metrics
-			if (d > 0) {
-				temp.add(d);
-				min = Math.min(min, d);
-			}
-		}
-		List<Double> result = new ArrayList<>();
-		for (Double d : temp) {
-			// drop the minimal one, because the first one usually is not accurate
-			if (d - min > 0.00001) {
-				result.add(d);
-			}
-		}
-		return result;
 	}
 
 	public void close() {
@@ -203,7 +172,7 @@ public class MetricReporter {
 				// it's thread-safe to update metrics
 				metrics.add(metric);
 				// logging
-				String message = String.format("Current TPS=%s, Cores=%s (%s TMs)",
+				String message = String.format("Current Throughput=%s, Cores=%s (%s TMs)",
 					metric.getPrettyTps(),
 					metric.getPrettyCpu(),
 					tms);
