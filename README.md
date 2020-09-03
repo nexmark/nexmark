@@ -35,7 +35,7 @@ These are multiple queries over a three entities model representing on online au
 | q14 | Calculation | Convert bid timestamp into types and find bids with specific price. Illustrates more complex projection and filter.  | ✅ |
 | q15 | Bidding Statistics Report | How many distinct users join the bidding for different level of price? Illustrates multiple distinct aggregations with filters. | ✅ |
 
-*Note: q1~q8 are from original [NEXMark queries](https://web.archive.org/web/20100620010601/http://datalab.cs.pdx.edu/niagaraST/NEXMark/), q0 and q9~q13 are from [Apache Beam](https://beam.apache.org/documentation/sdks/java/testing/nexmark), others are extended to cover more scenarios.
+*Note: q1 ~ q8 are from original [NEXMark queries](https://web.archive.org/web/20100620010601/http://datalab.cs.pdx.edu/niagaraST/NEXMark/), q0 and q9 ~ q13 are from [Apache Beam](https://beam.apache.org/documentation/sdks/java/testing/nexmark), others are extended to cover more scenarios.*
 
 ### Metrics
 
@@ -129,6 +129,8 @@ Some notable configurations including:
 - Use RocksDB state backend with incremental checkpoint enabled
 - MiniBatch optimization enabled with 2 seconds interval and 5000 rows
 - Splitting distinct aggregation optimization is enabled
+
+Flink version: manually build for release-1.11 branch on commit b9ca9bb.
 
 ### Workloads
 
