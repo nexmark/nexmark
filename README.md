@@ -96,8 +96,9 @@ Before start to run the benchmark, you should build the Nexmark benchmark first 
 - Step5: Configure Nexmark benchmark.
   - Set `nexmark.metric.reporter.host` to your master IP address.
 - Step6: Copy `flink` and `nexmark` to your worker nodes using `scp`.
-- Step7: Setup the benchmark cluster by running `nexmark/bin/setup_cluster.sh` on the master node.
-- Step8: Start Flink Cluster by running `flink/bin/start-cluster.sh` on the master node.
+- Step7: Start Flink Cluster by running `flink/bin/start-cluster.sh` on the master node.
+- Step8: Setup the benchmark cluster by running `nexmark/bin/setup_cluster.sh` on the master node.
+
 
 ### Run Nexmark
 
