@@ -36,7 +36,7 @@ public class NexmarkConfiguration implements Serializable {
 	public long numEvents = 0;
 
 	/** Number of event generators to use. Each generates events in its own timeline. */
-	@JsonProperty public int numEventGenerators = 100;
+	@JsonProperty public int numEventGenerators = 1;
 
 	/** Shape of event rate curve. */
 	@JsonProperty public NexmarkUtils.RateShape rateShape = NexmarkUtils.RateShape.SQUARE;
@@ -88,7 +88,7 @@ public class NexmarkConfiguration implements Serializable {
 	/**
 	 * Bid Proportion.
 	 */
-	@JsonProperty public int bidProportion = 96;
+	@JsonProperty public int bidProportion = 46;
 
 	/** Average idealized size of a 'new person' event, in bytes. */
 	@JsonProperty public int avgPersonByteSize = 200;
