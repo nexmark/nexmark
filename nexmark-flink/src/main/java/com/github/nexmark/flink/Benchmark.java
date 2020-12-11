@@ -90,6 +90,7 @@ public class Benchmark {
 		Duration monitorDelay = nexmarkConf.get(FlinkNexmarkOptions.METRIC_MONITOR_DELAY);
 		Duration monitorInterval = nexmarkConf.get(FlinkNexmarkOptions.METRIC_MONITOR_INTERVAL);
 		Duration monitorDuration = nexmarkConf.get(FlinkNexmarkOptions.METRIC_MONITOR_DURATION);
+		Boolean monitorMode = nexmarkConf.get(FlinkNexmarkOptions.METRIC_MONITOR_MODE);
 
 		WorkloadSuite workloadSuite = WorkloadSuite.fromConf(nexmarkConf);
 
@@ -106,7 +107,8 @@ public class Benchmark {
 				cpuMetricReceiver,
 				monitorDelay,
 				monitorInterval,
-				monitorDuration);
+				monitorDuration,
+				monitorMode);
 			QueryRunner runner = new QueryRunner(
 				queryName,
 				workload,
@@ -179,7 +181,7 @@ public class Benchmark {
 				entry.getKey(),
 				metric.getPrettyTps(),
 				metric.getPrettyCpu(),
-				metric.getPrettyTpsPerCore());
+				metric.getFormattedTpsPerCore());
 		}
 		printLine('-', "+", itemMaxLength, "", "", "", "");
 		System.err.println();

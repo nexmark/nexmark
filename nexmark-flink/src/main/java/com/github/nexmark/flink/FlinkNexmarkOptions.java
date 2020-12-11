@@ -47,6 +47,11 @@ public class FlinkNexmarkOptions {
 		.defaultValue(Duration.ofSeconds(10))
 		.withDescription("The interval to request the metrics.");
 
+	public static final ConfigOption<Boolean> METRIC_MONITOR_MODE = ConfigOptions
+			.key("nexmark.metric.monitor.precise-mode")
+			.booleanType()
+			.defaultValue(false)
+			.withDescription("Use raw data to record.");
 
 	public static final ConfigOption<String> METRIC_REPORTER_HOST = ConfigOptions
 		.key("nexmark.metric.reporter.host")

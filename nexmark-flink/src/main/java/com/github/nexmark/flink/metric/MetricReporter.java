@@ -47,15 +47,17 @@ public class MetricReporter {
 	private final CpuMetricReceiver cpuMetricReceiver;
 	private final List<BenchmarkMetric> metrics;
 	private final ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
+	private final boolean preciseMode;
 	private volatile Throwable error;
 
-	public MetricReporter(FlinkRestClient flinkRestClient, CpuMetricReceiver cpuMetricReceiver, Duration monitorDelay, Duration monitorInterval, Duration monitorDuration) {
+	public MetricReporter(FlinkRestClient flinkRestClient, CpuMetricReceiver cpuMetricReceiver, Duration monitorDelay, Duration monitorInterval, Duration monitorDuration, Boolean preciseMode) {
 		this.monitorDelay = monitorDelay;
 		this.monitorInterval = monitorInterval;
 		this.monitorDuration = monitorDuration;
 		this.flinkRestClient = flinkRestClient;
 		this.cpuMetricReceiver = cpuMetricReceiver;
 		this.metrics = new ArrayList<>();
+		this.preciseMode = preciseMode;
 	}
 
 	private void submitMonitorThread() {
@@ -138,10 +140,11 @@ public class MetricReporter {
 
 		double avgTps = sumTps / metrics.size();
 		double avgCpu = sumCpu / metrics.size();
-		BenchmarkMetric metric = new BenchmarkMetric(avgTps, avgCpu);
-		String message = String.format("Summary Average: Throughput=%s, Cores=%s",
+		BenchmarkMetric metric = new BenchmarkMetric(avgTps, avgCpu, preciseMode);
+		String message = String.format("Summary Average: Throughput=%s, Cores=%s, Throughput per Cores=%s",
 			metric.getPrettyTps(),
-			metric.getPrettyCpu());
+			metric.getPrettyCpu(),
+			metric.getFormattedTpsPerCore());
 		System.out.println(message);
 		LOG.info(message);
 		return metric;

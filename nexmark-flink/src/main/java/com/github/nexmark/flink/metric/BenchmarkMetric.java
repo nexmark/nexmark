@@ -27,10 +27,16 @@ import java.util.TreeMap;
 public class BenchmarkMetric {
 	private final double tps;
 	private final double cpu;
+	private final boolean preciseMode;
 
 	public BenchmarkMetric(double tps, double cpu) {
+		this(tps, cpu, false);
+	}
+
+	public BenchmarkMetric(double tps, double cpu, boolean preciseMode) {
 		this.tps = tps;
 		this.cpu = cpu;
+		this.preciseMode = preciseMode;
 	}
 
 	public double getTps() {
@@ -38,7 +44,11 @@ public class BenchmarkMetric {
 	}
 
 	public String getPrettyTps() {
-		return formatLongValue((long) tps);
+		if (preciseMode) {
+			return tps + "";
+		} else {
+			return formatLongValue((long) tps);
+		}
 	}
 
 	public double getCpu() {
@@ -49,9 +59,13 @@ public class BenchmarkMetric {
 		return NUMBER_FORMAT.format(cpu);
 	}
 
-	public String getPrettyTpsPerCore() {
+	public String getFormattedTpsPerCore() {
 		long result = (long) (tps / cpu);
-		return formatLongValue(result);
+		if (preciseMode) {
+			return result + "";
+		} else {
+			return formatLongValue(result);
+		}
 	}
 
 	@Override
