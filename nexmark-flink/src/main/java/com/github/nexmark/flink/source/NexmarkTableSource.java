@@ -25,9 +25,13 @@ import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.connector.source.ScanTableSource;
 import org.apache.flink.table.connector.source.SourceFunctionProvider;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.DateType;
+import org.apache.flink.table.types.logical.RowType;
 
 import com.github.nexmark.flink.generator.GeneratorConfig;
 
+import java.util.Date;
 import java.util.Objects;
 
 import static org.apache.flink.table.api.DataTypes.BIGINT;
@@ -42,40 +46,57 @@ import static org.apache.flink.table.api.DataTypes.TIMESTAMP;
  */
 public class NexmarkTableSource implements ScanTableSource {
 
-	public static final TableSchema NEXMARK_SCHEMA = TableSchema.builder()
-		.field("event_type", INT())
-		.field("person", ROW(
-			FIELD("id", BIGINT()),
-			FIELD("name", STRING()),
-			FIELD("emailAddress", STRING()),
-			FIELD("creditCard", STRING()),
-			FIELD("city", STRING()),
-			FIELD("state", STRING()),
-			FIELD("dateTime", TIMESTAMP(3)),
-			FIELD("extra", STRING())))
-		.field("auction", ROW(
-			FIELD("id", BIGINT()),
-			FIELD("itemName", STRING()),
-			FIELD("description", STRING()),
-			FIELD("initialBid", BIGINT()),
-			FIELD("reserve", BIGINT()),
-			FIELD("dateTime", TIMESTAMP(3)),
-			FIELD("expires", TIMESTAMP(3)),
-			FIELD("seller", BIGINT()),
-			FIELD("category", BIGINT()),
-			FIELD("extra", STRING())))
-		.field("bid", ROW(
+	private static DataType BID_SCHEMA = ROW(
 			FIELD("auction", BIGINT()),
 			FIELD("bidder", BIGINT()),
 			FIELD("price", BIGINT()),
 			FIELD("dateTime", TIMESTAMP(3)),
-			FIELD("extra", STRING())))
-		.build();
+			FIELD("extra", STRING()));
+
+	private static DataType EXTENDED_BID_SCHEMA = ROW(
+			FIELD("auction", BIGINT()),
+			FIELD("seller", BIGINT()),
+			FIELD("bidder", BIGINT()),
+			FIELD("category", BIGINT()),
+			FIELD("price", BIGINT()),
+			FIELD("dateTime", TIMESTAMP(3)),
+			FIELD("extra", STRING()));
+
+	public static final TableSchema NEXMARK_SCHEMA = buildSchema(BID_SCHEMA);
+
+	public static final TableSchema EXTENDED_NEXMARK_SCHEMA = buildSchema(EXTENDED_BID_SCHEMA);
 
 	private final GeneratorConfig config;
 
 	public NexmarkTableSource(GeneratorConfig config) {
 		this.config = config;
+	}
+
+	private static TableSchema buildSchema(DataType bidType) {
+		 return TableSchema.builder()
+				.field("event_type", INT())
+				.field("person", ROW(
+						FIELD("id", BIGINT()),
+						FIELD("name", STRING()),
+						FIELD("emailAddress", STRING()),
+						FIELD("creditCard", STRING()),
+						FIELD("city", STRING()),
+						FIELD("state", STRING()),
+						FIELD("dateTime", TIMESTAMP(3)),
+						FIELD("extra", STRING())))
+				.field("auction", ROW(
+						FIELD("id", BIGINT()),
+						FIELD("itemName", STRING()),
+						FIELD("description", STRING()),
+						FIELD("initialBid", BIGINT()),
+						FIELD("reserve", BIGINT()),
+						FIELD("dateTime", TIMESTAMP(3)),
+						FIELD("expires", TIMESTAMP(3)),
+						FIELD("seller", BIGINT()),
+						FIELD("category", BIGINT()),
+						FIELD("extra", STRING())))
+				 .field("bid", bidType)
+				.build();
 	}
 
 	@Override
@@ -90,7 +111,7 @@ public class NexmarkTableSource implements ScanTableSource {
 			.createTypeInformation(NEXMARK_SCHEMA.toPhysicalRowDataType());
 		NexmarkSourceFunction<RowData> sourceFunction = new NexmarkSourceFunction<>(
 			config,
-			new RowDataEventDeserializer(),
+			new RowDataEventDeserializer(config.getExtendedBidMode()),
 			outputType);
 		return SourceFunctionProvider.of(sourceFunction, false);
 	}

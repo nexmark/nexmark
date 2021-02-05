@@ -46,17 +46,16 @@ public class AuctionGenerator {
 
     long id = lastBase0AuctionId(config, eventId) + GeneratorConfig.FIRST_AUCTION_ID;
 
-    long seller;
-    // Here P(auction will be for a hot seller) = 1 - 1/hotSellersRatio.
-    if (random.nextInt(config.getHotSellersRatio()) > 0) {
-      // Choose the first person in the batch of last HOT_SELLER_RATIO people.
-      seller = (PersonGenerator.lastBase0PersonId(config, eventId) / HOT_SELLER_RATIO) * HOT_SELLER_RATIO;
+    long seller, category;
+    if (config.getExtendedBidMode()) {
+      seller = nextSellerIdWithoutRandom(config, id);
+      category = nextCategoryWithoutRandom(id);
     } else {
-      seller = PersonGenerator.nextBase0PersonId(eventId, random, config);
+      seller = nextSellerIdWithRandom(config, random, eventId);
+      category = nextCategoryWithRandom(random);
     }
     seller += GeneratorConfig.FIRST_PERSON_ID;
 
-    long category = GeneratorConfig.FIRST_CATEGORY_ID + random.nextInt(NUM_CATEGORIES);
     long initialBid = PriceGenerator.nextPrice(random);
     long expires = timestamp + nextAuctionLengthMs(eventsCountSoFar, random, timestamp, config);
     String name = StringsGenerator.nextString(random, 20);
@@ -130,5 +129,46 @@ public class AuctionGenerator {
     // Choose a length with average horizonMs.
     long horizonMs = futureAuction - timestamp;
     return 1L + LongGenerator.nextLong(random, Math.max(horizonMs * 2, 1L));
+  }
+
+  /**
+   * Generate the seller id.
+   */
+  public static long nextSellerIdWithRandom(GeneratorConfig config, Random random, long eventId) {
+    // Here P(auction will be for a hot seller) = 1 - 1/hotSellersRatio.
+    if (random.nextInt(config.getHotSellersRatio()) > 0) {
+      // Choose the first person in the batch of last HOT_SELLER_RATIO people.
+      return (PersonGenerator.lastBase0PersonId(config, eventId) / HOT_SELLER_RATIO) * HOT_SELLER_RATIO;
+    } else {
+      return PersonGenerator.nextBase0PersonId(eventId, random, config);
+    }
+  }
+
+  /**
+   * Generate the seller id.
+   *
+   * It only used when generate extended bid.
+   */
+  public static long nextSellerIdWithoutRandom(GeneratorConfig config, long auctionId) {
+    // Here P(auction will be for a hot seller) = 1 - 1/hotSellersRatio.
+    if (auctionId % config.getHotAuctionRatio() > 0) {
+      return (PersonGenerator.lastBase0PersonIdWithAuctionId(config, auctionId) / HOT_SELLER_RATIO) * HOT_SELLER_RATIO;
+    } else {
+      return PersonGenerator.nextBase0PersonIdWithAuctionId(config, auctionId);
+    }
+  }
+
+  /**
+   * Generate the category information.
+   */
+  public static long nextCategoryWithRandom(Random random) {
+    return GeneratorConfig.FIRST_CATEGORY_ID + random.nextInt(NUM_CATEGORIES);
+  }
+
+  /**
+   * Generate the category information with auction id. In most cases, it's used to look up the category.
+   */
+  public static long nextCategoryWithoutRandom(long auctionId) {
+    return GeneratorConfig.FIRST_CATEGORY_ID + auctionId % NUM_CATEGORIES;
   }
 }

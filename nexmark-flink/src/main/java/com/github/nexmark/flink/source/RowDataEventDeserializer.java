@@ -26,9 +26,16 @@ import org.apache.flink.table.data.TimestampData;
 import com.github.nexmark.flink.model.Auction;
 import com.github.nexmark.flink.model.Bid;
 import com.github.nexmark.flink.model.Event;
+import com.github.nexmark.flink.model.ExtendedBid;
 import com.github.nexmark.flink.model.Person;
 
 public class RowDataEventDeserializer implements EventDeserializer<RowData> {
+
+	private boolean extendedBidMode;
+
+	public RowDataEventDeserializer(boolean extendedBidMode) {
+		this.extendedBidMode = extendedBidMode;
+	}
 
 	@Override
 	public RowData deserialize(Event event) {
@@ -82,12 +89,26 @@ public class RowDataEventDeserializer implements EventDeserializer<RowData> {
 	}
 
 	private RowData convertBid(Bid bid) {
-		GenericRowData rowData = new GenericRowData(5);
-		rowData.setField(0, bid.auction);
-		rowData.setField(1, bid.bidder);
-		rowData.setField(2, bid.price);
-		rowData.setField(3, TimestampData.fromInstant(bid.dateTime));
-		rowData.setField(4, StringData.fromString(bid.extra));
+		GenericRowData rowData;
+		if (extendedBidMode) {
+			ExtendedBid extendedBid = (ExtendedBid) bid;
+			rowData = new GenericRowData(7);
+			rowData.setField(0, extendedBid.auction);
+			rowData.setField(1, extendedBid.seller);
+			rowData.setField(2, extendedBid.bidder);
+			rowData.setField(3, extendedBid.category);
+			rowData.setField(4, bid.price);
+			rowData.setField(5, TimestampData.fromInstant(bid.dateTime));
+			rowData.setField(6, StringData.fromString(bid.extra));
+		} else {
+			rowData = new GenericRowData(5);
+			rowData.setField(0, bid.auction);
+			rowData.setField(1, bid.bidder);
+			rowData.setField(2, bid.price);
+			rowData.setField(3, TimestampData.fromInstant(bid.dateTime));
+			rowData.setField(4, StringData.fromString(bid.extra));
+		}
+
 		return rowData;
 	}
 

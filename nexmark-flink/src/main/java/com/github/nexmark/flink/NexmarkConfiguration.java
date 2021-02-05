@@ -135,6 +135,14 @@ public class NexmarkConfiguration implements Serializable {
 	 */
 	@JsonProperty public long outOfOrderGroupSize = 1;
 
+	/** Flag to determine whether to use extended bid as output. **/
+	@JsonProperty public boolean extendedBidMode = false;
+
+	/** Base time for first event. If value is 0, use currentTime. **/
+	@JsonProperty public long baseTime = System.currentTimeMillis();
+
+	@JsonProperty public boolean simulationMode = true;
+
 	/** Return full description as a string. */
 	@Override
 	public String toString() {
@@ -177,7 +185,10 @@ public class NexmarkConfiguration implements Serializable {
 			Double.compare(that.probDelayedEvent, probDelayedEvent) == 0 &&
 			outOfOrderGroupSize == that.outOfOrderGroupSize &&
 			rateShape == that.rateShape &&
-			rateUnit == that.rateUnit;
+			rateUnit == that.rateUnit &&
+			baseTime == that.baseTime &&
+			extendedBidMode == that.extendedBidMode &&
+			simulationMode == that.simulationMode;
 	}
 
 	@Override
@@ -210,6 +221,9 @@ public class NexmarkConfiguration implements Serializable {
 			numActivePeople,
 			occasionalDelaySec,
 			probDelayedEvent,
-			outOfOrderGroupSize);
+			outOfOrderGroupSize,
+			baseTime,
+			extendedBidMode,
+			simulationMode);
 	}
 }

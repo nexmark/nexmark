@@ -186,7 +186,7 @@ public class NexmarkGenerator implements Iterator<TimestampedValue<Event>>, Seri
     // the event timestamp.
     long watermark = config.timestampForEvent(config.nextEventNumberForWatermark(eventsCountSoFar));
     // When, in wallclock time, we should emit the event.
-    long wallclockTimestamp = wallclockBaseTime + (eventTimestamp - getCurrentConfig().baseTime);
+    long wallclockTimestamp = wallclockBaseTime + (eventTimestamp - getCurrentConfig().getBaseTime());
 
     // Seed the random number generator with the next 'event id'.
     Random random = new Random(getNextEventId());

@@ -150,6 +150,26 @@ public class NexmarkSourceOptions {
 		.longType()
 		.defaultValue(0L);
 
+	/**
+	 * @see NexmarkConfiguration#extendedBidMode
+	 */
+	public static final ConfigOption<Boolean> EXTENDED_BID_MODE = ConfigOptions
+		.key("bid.extended.mode")
+		.booleanType()
+		.defaultValue(false);
+
+	/**
+	 * @see NexmarkConfiguration#baseTime
+	 */
+	public static final ConfigOption<Long> BASE_TIME = ConfigOptions
+		.key("events.base-time")
+		.longType()
+		.noDefaultValue();
+
+	public static final ConfigOption<Boolean> SIMULATION_MODE = ConfigOptions
+		.key("events.simulation.mode")
+		.booleanType()
+		.defaultValue(true);
 
 	public static NexmarkConfiguration convertToNexmarkConfiguration(ReadableConfig config) {
 		NexmarkConfiguration nexmarkConf = new NexmarkConfiguration();
@@ -168,6 +188,9 @@ public class NexmarkSourceOptions {
 		nexmarkConf.hotBiddersRatio = config.get(BID_HOT_RATIO_BIDDERS);
 		nexmarkConf.hotSellersRatio = config.get(AUCTION_HOT_RATIO_SELLERS);
 		nexmarkConf.numEvents = config.get(EVENTS_NUM);
+		nexmarkConf.extendedBidMode = config.get(EXTENDED_BID_MODE);
+		config.getOptional(BASE_TIME).ifPresent(timestamp -> nexmarkConf.baseTime = timestamp);
+		nexmarkConf.simulationMode = config.get(SIMULATION_MODE);
 
 		return nexmarkConf;
 	}

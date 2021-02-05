@@ -21,15 +21,30 @@ package com.github.nexmark.flink.generator;
 import com.github.nexmark.flink.NexmarkConfiguration;
 import com.github.nexmark.flink.model.Event;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class NexmarkGeneratorTest {
+
+	@Parameterized.Parameter(0)
+	public boolean useExtendedBidMode;
+
+	@Parameterized.Parameters(name = "useExtendedBidMode = {0}")
+	public static Object[] parameters() {
+		return new Object[][] {
+				new Object[] {true},
+				new Object[] {false}
+		};
+	}
 
 	@Test
 	public void testGenerate() {
 		NexmarkConfiguration nexmarkConfiguration = new NexmarkConfiguration();
 		nexmarkConfiguration.bidProportion = 46;
+		nexmarkConfiguration.extendedBidMode = useExtendedBidMode;
 		GeneratorConfig generatorConfig = new GeneratorConfig(
-			nexmarkConfiguration, System.currentTimeMillis(), 1, 100, 1);
+			nexmarkConfiguration, 0, 15000, 0);
 		NexmarkGenerator generator = new NexmarkGenerator(generatorConfig);
 		int count = 0;
 		while (generator.hasNext()) {
