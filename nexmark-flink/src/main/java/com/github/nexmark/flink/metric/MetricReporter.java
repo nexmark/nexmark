@@ -115,7 +115,27 @@ public class MetricReporter {
 		}
 	}
 
-	public BenchmarkMetric reportMetric() {
+	private void waitForFinish(String jobId) {
+		while (!flinkRestClient.isFinished(jobId)) {
+			try {
+				Thread.sleep(1000L);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+			if (error != null) {
+				throw new RuntimeException(error);
+			}
+		}
+	}
+
+	public BenchmarkMetric reportMetric(long eventsNum) {
+		if (eventsNum == Long.MAX_VALUE) {
+			return reportTpsMetric();
+		}
+		return reportEventsNumMetric(eventsNum);
+	}
+
+	private BenchmarkMetric reportTpsMetric() {
 		System.out.println(String.format("Monitor metrics after %s minutes.", monitorDelay.toMinutes()));
 		waitFor(monitorDelay);
 		System.out.println(String.format("Start to monitor metrics for %s minutes.", monitorDuration.toMinutes()));
@@ -125,6 +145,23 @@ public class MetricReporter {
 		// cleanup the resource
 		this.close();
 
+		return doReport();
+	}
+
+	private BenchmarkMetric reportEventsNumMetric(long eventsNum) {
+		System.out.println(String.format("Start to monitor metrics until %s events has been processed.", eventsNum));
+		submitMonitorThread();
+
+		String jobId = flinkRestClient.getCurrentJobId();
+		waitForFinish(jobId);
+
+		// cleanup the resource
+		this.close();
+
+		return doReport();
+	}
+
+	private BenchmarkMetric doReport() {
 		if (metrics.isEmpty()) {
 			throw new RuntimeException("The metric reporter doesn't collect any metrics.");
 		}
@@ -140,8 +177,8 @@ public class MetricReporter {
 		double avgCpu = sumCpu / metrics.size();
 		BenchmarkMetric metric = new BenchmarkMetric(avgTps, avgCpu);
 		String message = String.format("Summary Average: Throughput=%s, Cores=%s",
-			metric.getPrettyTps(),
-			metric.getPrettyCpu());
+				metric.getPrettyTps(),
+				metric.getPrettyCpu());
 		System.out.println(message);
 		LOG.info(message);
 		return metric;

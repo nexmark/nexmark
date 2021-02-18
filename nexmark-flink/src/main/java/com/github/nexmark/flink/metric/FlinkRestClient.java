@@ -145,6 +145,21 @@ public class FlinkRestClient {
 		return TpsMetric.fromJson(response);
 	}
 
+	public boolean isFinished(String jobId) {
+		String url = String.format(
+			"http://%s/jobs/%s",
+			jmEndpoint,
+			jobId);
+		String response = executeAsString(url);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			JsonNode state = jsonNode.get("state");
+			return state.asText().equalsIgnoreCase("FINISHED");
+		} catch (Exception e) {
+			throw new RuntimeException("The response is not a valid JSON string: \n" + response, e);
+		}
+	}
+
 	private void patch(String url) {
 		HttpPatch httpPatch = new HttpPatch();
 		httpPatch.setURI(URI.create(url));

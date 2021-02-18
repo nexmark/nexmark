@@ -28,12 +28,18 @@ public class Workload {
 	private final int personProportion;
 	private final int auctionProportion;
 	private final int bidProportion;
+	private final long eventsNum;
 
 	public Workload(long tps, int personProportion, int auctionProportion, int bidProportion) {
+		this(tps, personProportion, auctionProportion, bidProportion, Long.MAX_VALUE);
+	}
+
+	public Workload(long tps, int personProportion, int auctionProportion, int bidProportion, long eventsNum) {
 		this.tps = tps;
 		this.personProportion = personProportion;
 		this.auctionProportion = auctionProportion;
 		this.bidProportion = bidProportion;
+		this.eventsNum = eventsNum;
 	}
 
 	public long getTps() {
@@ -52,6 +58,10 @@ public class Workload {
 		return bidProportion;
 	}
 
+	public long getEventsNum() {
+		return eventsNum;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -60,21 +70,23 @@ public class Workload {
 		return tps == workload.tps &&
 			personProportion == workload.personProportion &&
 			auctionProportion == workload.auctionProportion &&
-			bidProportion == workload.bidProportion;
+			bidProportion == workload.bidProportion &&
+			eventsNum == workload.eventsNum;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(tps, personProportion, auctionProportion, bidProportion);
+		return Objects.hash(tps, personProportion, auctionProportion, bidProportion, eventsNum);
 	}
 
 	public String getSummaryString() {
 		return String.format(
-			"[tps=%s, percentage=bid:%s,auction:%s,person:%s]",
+			"[tps=%s, percentage=bid:%s,auction:%s,person:%s, eventsNum:%s]",
 			BenchmarkMetric.formatLongValue(tps),
 			bidProportion,
 			auctionProportion,
-			personProportion);
+			personProportion,
+			eventsNum);
 	}
 
 	@Override
@@ -84,6 +96,7 @@ public class Workload {
 			", personProportion=" + personProportion +
 			", auctionProportion=" + auctionProportion +
 			", bidProportion=" + bidProportion +
+			", eventsNum=" + eventsNum +
 			'}';
 	}
 }

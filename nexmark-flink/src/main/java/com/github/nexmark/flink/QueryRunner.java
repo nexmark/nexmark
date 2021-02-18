@@ -65,13 +65,20 @@ public class QueryRunner {
 			LOG.info("==================================================================");
 			LOG.info("Start to run query " + queryName + " with workload " + workload.getSummaryString());
 			runInternal();
-			// blocking until collect enough metrics
-			BenchmarkMetric metrics = metricReporter.reportMetric();
-			// cancel job
-			System.out.println("Stop job query " + queryName);
-			LOG.info("Stop job query " + queryName);
-			flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
-			return metrics;
+
+			// if eventsNum equals to Long.MAX_VALUE, run the benchmark until collect enough metrics.
+			// else, run the benchmark until processed specified number of events.
+			if (workload.getEventsNum() == Long.MAX_VALUE) {
+				// blocking until collect enough metrics
+				BenchmarkMetric metrics = metricReporter.reportMetric(Long.MAX_VALUE);
+				// cancel job
+				System.out.println("Stop job query " + queryName);
+				LOG.info("Stop job query " + queryName);
+				flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
+				return metrics;
+			} else {
+				return metricReporter.reportMetric(workload.getEventsNum());
+			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -95,6 +102,7 @@ public class QueryRunner {
 		varsMap.put("PERSON_PROPORTION", String.valueOf(workload.getPersonProportion()));
 		varsMap.put("AUCTION_PROPORTION", String.valueOf(workload.getAuctionProportion()));
 		varsMap.put("BID_PROPORTION", String.valueOf(workload.getBidProportion()));
+		varsMap.put("EVENTS_NUM", String.valueOf(workload.getEventsNum()));
 		return varsMap;
 	}
 

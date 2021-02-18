@@ -34,6 +34,7 @@ public class WorkloadSuite {
 
 	private static final String WORKLOAD_SUITE_CONF_PREFIX = "nexmark.workload.suite.";
 	private static final String TPS_CONF_SUFFIX = ".tps";
+	private static final String EVENTS_NUM_CONF_SUFFIX = ".events.num";
 
 	private final Map<String, Workload> query2Workload;
 
@@ -80,6 +81,9 @@ public class WorkloadSuite {
 			String tpsKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + TPS_CONF_SUFFIX;
 			long tps = Long.parseLong(confMap.get(tpsKey));
 
+			String eventsNumKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + EVENTS_NUM_CONF_SUFFIX;
+			long eventsNum = Long.parseLong(confMap.getOrDefault(eventsNumKey, Long.toString(Long.MAX_VALUE)));
+
 			int personProportion = NexmarkSourceOptions.PERSON_PROPORTION.defaultValue();
 			int auctionProportion = NexmarkSourceOptions.AUCTION_PROPORTION.defaultValue();
 			int bidProportion = NexmarkSourceOptions.BID_PROPORTION.defaultValue();
@@ -100,7 +104,7 @@ public class WorkloadSuite {
 					}
 				}
 			}
-			Workload load = new Workload(tps, personProportion, auctionProportion, bidProportion);
+			Workload load = new Workload(tps, personProportion, auctionProportion, bidProportion, eventsNum);
 
 			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + ".queries";
 			List<String> queries = new ArrayList<>();

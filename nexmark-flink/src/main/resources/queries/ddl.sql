@@ -39,7 +39,8 @@ CREATE TABLE nexmark (
     'next-event.rate' = '${TPS}',
     'person.proportion' = '${PERSON_PROPORTION}',
     'auction.proportion' = '${AUCTION_PROPORTION}',
-    'bid.proportion' = '${BID_PROPORTION}'
+    'bid.proportion' = '${BID_PROPORTION}',
+    'events.num' = '${EVENTS_NUM}'
 );
 
 CREATE VIEW person AS
