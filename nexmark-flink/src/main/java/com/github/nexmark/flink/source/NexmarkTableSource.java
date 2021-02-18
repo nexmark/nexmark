@@ -86,7 +86,7 @@ public class NexmarkTableSource implements ScanTableSource {
 	@SuppressWarnings("unchecked")
 	@Override
 	public ScanRuntimeProvider getScanRuntimeProvider(ScanContext scanContext) {
-		TypeInformation<RowData> outputType = (TypeInformation<RowData>) scanContext
+		TypeInformation<RowData> outputType = scanContext
 			.createTypeInformation(NEXMARK_SCHEMA.toPhysicalRowDataType());
 		NexmarkSourceFunction<RowData> sourceFunction = new NexmarkSourceFunction<>(
 			config,

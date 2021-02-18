@@ -116,6 +116,7 @@ public class NexmarkTableSourceFactoryTest {
 			ObjectIdentifier.of("default", "default", "t1"),
 			new CatalogTableImpl(NexmarkTableSource.NEXMARK_SCHEMA, options, "mock source"),
 			new Configuration(),
-			NexmarkTableSourceFactoryTest.class.getClassLoader());
+			NexmarkTableSourceFactoryTest.class.getClassLoader(),
+			false);
 	}
 }
