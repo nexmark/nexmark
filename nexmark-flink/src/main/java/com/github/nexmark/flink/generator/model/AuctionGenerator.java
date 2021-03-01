@@ -25,11 +25,6 @@ import java.util.Random;
 
 /** AuctionGenerator. */
 public class AuctionGenerator {
-  /**
-   * Keep the number of categories small so the example queries will find results even with a small
-   * batch of events.
-   */
-  private static final int NUM_CATEGORIES = 5;
 
   /** Number of yet-to-be-created people and auction ids allowed. */
   private static final int AUCTION_ID_LEAD = 10;
@@ -49,10 +44,10 @@ public class AuctionGenerator {
     long seller, category;
     if (config.getExtendedBidMode()) {
       seller = nextSellerIdWithoutRandom(config, id);
-      category = nextCategoryWithoutRandom(id);
+      category = nextCategoryWithoutRandom(id, config.getNumCategories());
     } else {
       seller = nextSellerIdWithRandom(config, random, eventId);
-      category = nextCategoryWithRandom(random);
+      category = nextCategoryWithRandom(random, config.getNumCategories());
     }
     seller += GeneratorConfig.FIRST_PERSON_ID;
 
@@ -161,14 +156,19 @@ public class AuctionGenerator {
   /**
    * Generate the category information.
    */
-  public static long nextCategoryWithRandom(Random random) {
-    return GeneratorConfig.FIRST_CATEGORY_ID + random.nextInt(NUM_CATEGORIES);
+  public static long nextCategoryWithRandom(Random random, int numCategories) {
+    return GeneratorConfig.FIRST_CATEGORY_ID + random.nextInt(numCategories);
   }
 
   /**
    * Generate the category information with auction id. In most cases, it's used to look up the category.
    */
-  public static long nextCategoryWithoutRandom(long auctionId) {
-    return GeneratorConfig.FIRST_CATEGORY_ID + auctionId % NUM_CATEGORIES;
+  public static long nextCategoryWithoutRandom(long auctionId, int numCategories) {
+    return GeneratorConfig.FIRST_CATEGORY_ID + hashLong(auctionId) % numCategories;
+  }
+
+  private static long hashLong(long key) {
+    long h = key * 0x9E3779B9L;
+    return Integer.toUnsignedLong((int) (h ^ (h >> 32)));
   }
 }

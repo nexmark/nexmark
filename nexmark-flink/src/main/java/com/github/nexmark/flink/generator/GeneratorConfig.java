@@ -83,6 +83,8 @@ public class GeneratorConfig implements Serializable {
    */
   private final long eventsPerEpoch;
 
+  private final int numCategories;
+
   public GeneratorConfig(
       NexmarkConfiguration configuration,
       long firstEventId,
@@ -117,6 +119,7 @@ public class GeneratorConfig implements Serializable {
     long epochPeriodMs = 0;
     this.eventsPerEpoch = eventsPerEpoch;
     this.epochPeriodMs = epochPeriodMs;
+    this.numCategories = configuration.numCategories;
   }
 
   /** Return a copy of this config. */
@@ -175,6 +178,10 @@ public class GeneratorConfig implements Serializable {
 
   public int getNumActivePeople() {
     return configuration.numActivePeople;
+  }
+
+  public int getNumCategories() {
+    return configuration.numCategories;
   }
 
   public int getHotSellersRatio() {
@@ -288,6 +295,7 @@ public class GeneratorConfig implements Serializable {
         firstEventNumber == that.firstEventNumber &&
         epochPeriodMs == that.epochPeriodMs &&
         eventsPerEpoch == that.eventsPerEpoch &&
+        numCategories == that.numCategories &&
         Objects.equals(configuration, that.configuration) &&
         Arrays.equals(interEventDelayUs, that.interEventDelayUs);
   }
@@ -305,6 +313,7 @@ public class GeneratorConfig implements Serializable {
         maxEvents,
         firstEventNumber,
         epochPeriodMs,
+        numCategories,
         eventsPerEpoch);
     result = 31 * result + Arrays.hashCode(interEventDelayUs);
     return result;
@@ -336,6 +345,8 @@ public class GeneratorConfig implements Serializable {
     sb.append(epochPeriodMs);
     sb.append(";eventsPerEpoch:");
     sb.append(eventsPerEpoch);
+    sb.append(";numCategories:");
+    sb.append(numCategories);
     sb.append("}");
     return sb.toString();
   }

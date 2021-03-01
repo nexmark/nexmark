@@ -159,6 +159,14 @@ public class NexmarkSourceOptions {
 		.defaultValue(false);
 
 	/**
+	 * @see NexmarkConfiguration#numCategories
+	 */
+	public static final ConfigOption<Integer> NUM_CATEGORIES = ConfigOptions
+			.key("num.categories")
+			.intType()
+			.defaultValue(5);
+
+	/**
 	 * @see NexmarkConfiguration#baseTime
 	 */
 	public static final ConfigOption<Long> BASE_TIME = ConfigOptions
@@ -189,6 +197,7 @@ public class NexmarkSourceOptions {
 		nexmarkConf.hotSellersRatio = config.get(AUCTION_HOT_RATIO_SELLERS);
 		nexmarkConf.numEvents = config.get(EVENTS_NUM);
 		nexmarkConf.extendedBidMode = config.get(EXTENDED_BID_MODE);
+		nexmarkConf.numCategories = config.get(NUM_CATEGORIES);
 		config.getOptional(BASE_TIME).ifPresent(timestamp -> nexmarkConf.baseTime = timestamp);
 		nexmarkConf.simulationMode = config.get(SIMULATION_MODE);
 

@@ -69,7 +69,7 @@ public class BidGenerator {
               auction,
               AuctionGenerator.nextSellerIdWithoutRandom(config, auction),
               bidder,
-              AuctionGenerator.nextCategoryWithoutRandom(auction),
+              AuctionGenerator.nextCategoryWithoutRandom(auction, config.getNumCategories()),
               price,
               Instant.ofEpochMilli(timestamp),
               extra);

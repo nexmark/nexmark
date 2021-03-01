@@ -138,6 +138,12 @@ public class NexmarkConfiguration implements Serializable {
 	/** Flag to determine whether to use extended bid as output. **/
 	@JsonProperty public boolean extendedBidMode = false;
 
+	/**
+	 * Keep the number of categories small so the example queries will find results even with a small
+	 * batch of events.
+	 */
+	@JsonProperty public int numCategories = 5;
+
 	/** Base time for first event. If value is 0, use currentTime. **/
 	@JsonProperty public long baseTime = System.currentTimeMillis();
 
@@ -188,6 +194,7 @@ public class NexmarkConfiguration implements Serializable {
 			rateUnit == that.rateUnit &&
 			baseTime == that.baseTime &&
 			extendedBidMode == that.extendedBidMode &&
+			numCategories == that.numCategories &&
 			simulationMode == that.simulationMode;
 	}
 
@@ -224,6 +231,7 @@ public class NexmarkConfiguration implements Serializable {
 			outOfOrderGroupSize,
 			baseTime,
 			extendedBidMode,
+			numCategories,
 			simulationMode);
 	}
 }

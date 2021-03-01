@@ -43,6 +43,7 @@ public class NexmarkGeneratorTest {
 		NexmarkConfiguration nexmarkConfiguration = new NexmarkConfiguration();
 		nexmarkConfiguration.bidProportion = 46;
 		nexmarkConfiguration.extendedBidMode = useExtendedBidMode;
+		nexmarkConfiguration.numCategories = 10_000;
 		GeneratorConfig generatorConfig = new GeneratorConfig(
 			nexmarkConfiguration, 0, 15000, 0);
 		NexmarkGenerator generator = new NexmarkGenerator(generatorConfig);
