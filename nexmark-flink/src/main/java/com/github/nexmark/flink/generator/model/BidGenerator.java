@@ -64,7 +64,7 @@ public class BidGenerator {
     int currentSize = 8 + 8 + 8 + 8;
     if (config.getExtendedBidMode()) {
       currentSize += (8 + 8);
-      String extra = StringsGenerator.nextExtra(random, currentSize, config.getAvgAuctionByteSize());
+      String extra = StringsGenerator.nextExtra(random, currentSize, config.getAvgBidByteSize());
       return new ExtendedBid(
               auction,
               AuctionGenerator.nextSellerIdWithoutRandom(config, auction),
