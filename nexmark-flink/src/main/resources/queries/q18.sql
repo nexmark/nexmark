@@ -21,8 +21,8 @@ SELECT
      category,
      DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,
      bidder,
-     MIN(UNIX_TIMESTAMP(dateTime)) filter (where price < 10000) AS min_visit_time1,
-     MIN(UNIX_TIMESTAMP(dateTime)) filter (where price >= 10000 and price < 1000000) AS min_visit_time2,
-     MIN(UNIX_TIMESTAMP(dateTime)) filter (where price >= 1000000) AS min_visit_time3
+     MIN(UNIX_TIMESTAMP(CAST(dateTime AS VARCHAR))) filter (where price < 10000) AS min_visit_time1,
+     MIN(UNIX_TIMESTAMP(CAST(dateTime AS VARCHAR))) filter (where price >= 10000 and price < 1000000) AS min_visit_time2,
+     MIN(UNIX_TIMESTAMP(CAST(dateTime AS VARCHAR))) filter (where price >= 1000000) AS min_visit_time3
 FROM bid
 GROUP BY category, DATE_FORMAT(dateTime, 'yyyy-MM-dd'), bidder;
