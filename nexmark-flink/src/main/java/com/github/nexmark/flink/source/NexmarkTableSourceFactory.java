@@ -100,6 +100,7 @@ public class NexmarkTableSourceFactory implements DynamicTableSourceFactory {
 		sets.add(NexmarkSourceOptions.BASE_TIME);
 		sets.add(NexmarkSourceOptions.EXTENDED_BID_MODE);
 		sets.add(NexmarkSourceOptions.SIMULATION_MODE);
+		sets.add(NexmarkSourceOptions.NUM_CATEGORIES);
 		return sets;
 	}
 }

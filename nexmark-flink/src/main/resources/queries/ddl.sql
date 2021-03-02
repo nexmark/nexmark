@@ -22,7 +22,9 @@ CREATE TABLE nexmark (
         extra  VARCHAR>,
     bid ROW<
         auction  BIGINT,
+        seller BIGINT,
         bidder  BIGINT,
+        category BIGINT,
         price  BIGINT,
         dateTime  TIMESTAMP(3),
         extra  VARCHAR>,
@@ -39,7 +41,9 @@ CREATE TABLE nexmark (
     'next-event.rate' = '${TPS}',
     'person.proportion' = '${PERSON_PROPORTION}',
     'auction.proportion' = '${AUCTION_PROPORTION}',
-    'bid.proportion' = '${BID_PROPORTION}'
+    'bid.proportion' = '${BID_PROPORTION}',
+    'bid.extended.mode' = 'true',
+    'num.categories' = '10000'
 );
 
 CREATE VIEW person AS
@@ -71,7 +75,9 @@ FROM nexmark WHERE event_type = 1;
 CREATE VIEW bid AS
 SELECT
     bid.auction,
+    bid.seller,
     bid.bidder,
+    bid.category,
     bid.price,
     dateTime,
     bid.extra
