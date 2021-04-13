@@ -19,8 +19,10 @@
 package com.github.nexmark.flink.source;
 
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.table.catalog.CatalogTableImpl;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectIdentifier;
+import org.apache.flink.table.catalog.ResolvedCatalogTable;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.FactoryUtil;
 
@@ -29,9 +31,11 @@ import com.github.nexmark.flink.generator.GeneratorConfig;
 import com.github.nexmark.flink.utils.NexmarkUtils;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.github.nexmark.flink.source.NexmarkTableSource.NEXMARK_SCHEMA;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -114,8 +118,16 @@ public class NexmarkTableSourceFactoryTest {
 		return FactoryUtil.createTableSource(
 			null,
 			ObjectIdentifier.of("default", "default", "t1"),
-			new CatalogTableImpl(NexmarkTableSource.NEXMARK_SCHEMA, options, "mock source"),
+			new ResolvedCatalogTable(
+					CatalogTable.of(
+							NEXMARK_SCHEMA.toSchema(),
+							"mock source",
+							new ArrayList<>(),
+							options),
+					ResolvedSchema.physical(
+							NEXMARK_SCHEMA.getFieldNames(), NEXMARK_SCHEMA.getFieldDataTypes())),
 			new Configuration(),
-			NexmarkTableSourceFactoryTest.class.getClassLoader());
+			NexmarkTableSourceFactoryTest.class.getClassLoader(),
+			false);
 	}
 }

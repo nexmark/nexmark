@@ -86,7 +86,8 @@ public class NexmarkTableSource implements ScanTableSource {
 	@SuppressWarnings("unchecked")
 	@Override
 	public ScanRuntimeProvider getScanRuntimeProvider(ScanContext scanContext) {
-		TypeInformation<RowData> outputType = (TypeInformation<RowData>) scanContext
+		// No type for be compatible for Flink 1.11 and 1.13
+		TypeInformation outputType = scanContext
 			.createTypeInformation(NEXMARK_SCHEMA.toPhysicalRowDataType());
 		NexmarkSourceFunction<RowData> sourceFunction = new NexmarkSourceFunction<>(
 			config,
