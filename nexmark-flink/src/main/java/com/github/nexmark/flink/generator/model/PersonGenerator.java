@@ -95,6 +95,32 @@ public class PersonGenerator {
     return epoch * config.personProportion + offset;
   }
 
+  /**
+   * Return the person id with specified auction id. It is used to generate the seller id or use auction id to
+   * look up the seller id.
+   *
+   * Note: it only uses the generated person as seller.
+   */
+  public static long lastBase0PersonIdWithAuctionId(GeneratorConfig config, long auctionId) {
+    long epoch = auctionId / config.auctionProportion;
+    long offset = auctionId % config.auctionProportion;
+
+    return epoch * config.personProportion + (offset % config.personProportion);
+  }
+
+  /**
+   * Return the person id with specified auction id. It is used to generate the seller id or use auction id to
+   * look up the seller id.
+   *
+   * Note: it may use the person who has not generated.
+   */
+  public static long nextBase0PersonIdWithAuctionId(GeneratorConfig config, long auctionId) {
+    long numPeople = (auctionId / config.auctionProportion + 1) * config.personProportion;
+    long activePeople = Math.min(numPeople, config.getNumActivePeople());
+    long n = auctionId % (activePeople + PERSON_ID_LEAD);
+    return numPeople - activePeople + n;
+  }
+
   /** return a random US state. */
   private static String nextUSState(Random random) {
     return US_STATES.get(random.nextInt(US_STATES.size()));

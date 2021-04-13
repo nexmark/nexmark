@@ -19,6 +19,7 @@ package com.github.nexmark.flink.generator.model;
 
 import com.github.nexmark.flink.generator.GeneratorConfig;
 import com.github.nexmark.flink.model.Bid;
+import com.github.nexmark.flink.model.ExtendedBid;
 
 import java.time.Instant;
 import java.util.Random;
@@ -59,8 +60,22 @@ public class BidGenerator {
     bidder += GeneratorConfig.FIRST_PERSON_ID;
 
     long price = PriceGenerator.nextPrice(random);
+
     int currentSize = 8 + 8 + 8 + 8;
-    String extra = StringsGenerator.nextExtra(random, currentSize, config.getAvgBidByteSize());
-    return new Bid(auction, bidder, price, Instant.ofEpochMilli(timestamp), extra);
+    if (config.getExtendedBidMode()) {
+      currentSize += (8 + 8);
+      String extra = StringsGenerator.nextExtra(random, currentSize, config.getAvgBidByteSize());
+      return new ExtendedBid(
+              auction,
+              AuctionGenerator.nextSellerIdWithoutRandom(config, auction),
+              bidder,
+              AuctionGenerator.nextCategoryWithoutRandom(auction, config.getNumCategories()),
+              price,
+              Instant.ofEpochMilli(timestamp),
+              extra);
+    } else {
+      String extra = StringsGenerator.nextExtra(random, currentSize, config.getAvgBidByteSize());
+      return new Bid(auction, bidder, price, Instant.ofEpochMilli(timestamp), extra);
+    }
   }
 }

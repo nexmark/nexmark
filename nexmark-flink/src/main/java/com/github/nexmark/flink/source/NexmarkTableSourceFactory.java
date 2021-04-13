@@ -42,14 +42,16 @@ public class NexmarkTableSourceFactory implements DynamicTableSourceFactory {
 		final ReadableConfig config = helper.getOptions();
 		helper.validate();
 		// validate schema
-		validateSchema(TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema()));
+		validateSchema(TableSchemaUtils.getPhysicalSchema(
+				context.getCatalogTable().getSchema()),
+				config.get(NexmarkSourceOptions.EXTENDED_BID_MODE));
 
 		int parallelism = context.getConfiguration().get(CoreOptions.DEFAULT_PARALLELISM);
 		NexmarkConfiguration nexmarkConf = NexmarkSourceOptions.convertToNexmarkConfiguration(config);
 		nexmarkConf.numEventGenerators = parallelism;
+
 		GeneratorConfig generatorConfig = new GeneratorConfig(
 			nexmarkConf,
-			System.currentTimeMillis(),
 			1,
 			nexmarkConf.numEvents,
 			1);
@@ -57,11 +59,12 @@ public class NexmarkTableSourceFactory implements DynamicTableSourceFactory {
 		return new NexmarkTableSource(generatorConfig);
 	}
 
-	private void validateSchema(TableSchema schema) {
-		if (!schema.equals(NexmarkTableSource.NEXMARK_SCHEMA)) {
+	private void validateSchema(TableSchema schema, boolean extendedMode) {
+		TableSchema targetSchema = extendedMode? NexmarkTableSource.EXTENDED_NEXMARK_SCHEMA : NexmarkTableSource.NEXMARK_SCHEMA;
+		if (!schema.equals(targetSchema)) {
 			throw new IllegalArgumentException(
 				String.format("The nexmark source table must be in the schema of \n%s\n. However, It is \n%s\n",
-					NexmarkTableSource.NEXMARK_SCHEMA,
+					targetSchema,
 					schema));
 		}
 	}
@@ -94,6 +97,10 @@ public class NexmarkTableSourceFactory implements DynamicTableSourceFactory {
 		sets.add(NexmarkSourceOptions.BID_HOT_RATIO_BIDDERS);
 		sets.add(NexmarkSourceOptions.AUCTION_HOT_RATIO_SELLERS);
 		sets.add(NexmarkSourceOptions.EVENTS_NUM);
+		sets.add(NexmarkSourceOptions.BASE_TIME);
+		sets.add(NexmarkSourceOptions.EXTENDED_BID_MODE);
+		sets.add(NexmarkSourceOptions.SIMULATION_MODE);
+		sets.add(NexmarkSourceOptions.NUM_CATEGORIES);
 		return sets;
 	}
 }

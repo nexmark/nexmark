@@ -44,23 +44,6 @@ import static org.junit.Assert.assertEquals;
 public class NexmarkTableSourceFactoryTest {
 
 	@Test
-	public void testCommonProperties() {
-		Map<String, String> properties = getAllOptions();
-
-		// validation for source
-		DynamicTableSource actualSource = createTableSource(properties);
-		GeneratorConfig config = new GeneratorConfig(
-			new NexmarkConfiguration(),
-			System.currentTimeMillis(),
-			1,
-			0,
-			1
-		);
-		NexmarkTableSource expectedSource = new NexmarkTableSource(config);
-		assertEquals(expectedSource, actualSource);
-	}
-
-	@Test
 	public void testCustomProperties() {
 		Map<String, String> properties = getAllOptions();
 		properties.put("rate.shape", "SQUARE");
@@ -78,6 +61,8 @@ public class NexmarkTableSourceFactoryTest {
 		properties.put("bid.hot-ratio.bidders", "5");
 		properties.put("auction.hot-ratio.sellers", "8");
 		properties.put("events.num", "100");
+		properties.put("events.base-time", "1000");
+		properties.put("events.simulation.mode", "false");
 
 		DynamicTableSource actualSource = createTableSource(properties);
 		NexmarkConfiguration nexmarkConf = new NexmarkConfiguration();
@@ -96,14 +81,14 @@ public class NexmarkTableSourceFactoryTest {
 		nexmarkConf.hotBiddersRatio = 5;
 		nexmarkConf.hotSellersRatio = 8;
 		nexmarkConf.numEvents = 100;
+		nexmarkConf.baseTime = 1000;
+		nexmarkConf.simulationMode = false;
 
 		GeneratorConfig config = new GeneratorConfig(
 			nexmarkConf,
-			System.currentTimeMillis(),
 			1,
 			nexmarkConf.numEvents,
-			1
-		);
+			1);
 		NexmarkTableSource expectedSource = new NexmarkTableSource(config);
 		assertEquals(expectedSource, actualSource);
 	}

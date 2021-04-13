@@ -57,6 +57,8 @@ public class NexmarkSourceFunction<T>
 
 	private transient ListState<Long> checkpointedState;
 
+	private transient long startTime;
+
 	public NexmarkSourceFunction(GeneratorConfig config, EventDeserializer<T> deserializer, TypeInformation<T> resultType) {
 		this.config = config;
 		this.deserializer = deserializer;
@@ -67,6 +69,7 @@ public class NexmarkSourceFunction<T>
 	public void open(Configuration parameters) throws Exception {
 		super.open(parameters);
 		this.generator = new NexmarkGenerator(getSubGeneratorConfig());
+		startTime = System.currentTimeMillis();
 	}
 
 	private GeneratorConfig getSubGeneratorConfig() {
@@ -117,9 +120,15 @@ public class NexmarkSourceFunction<T>
 			long now = System.currentTimeMillis();
 			NexmarkGenerator.NextEvent nextEvent = generator.nextEvent();
 
-			if (nextEvent.wallclockTimestamp > now) {
+			// continue writing
+			if (config.getSimulationMode() && nextEvent.wallclockTimestamp > now) {
 				// sleep until wall clock less than current timestamp.
 				Thread.sleep(nextEvent.wallclockTimestamp - now);
+			}
+			if (nextEvent.wallclockTimestamp - startTime > 24 * 60 * 60 * 1000 + 3 * 60 * 1000) {
+				// emit the final watermark
+				cancel();
+				break;
 			}
 
 			T next = deserializer.deserialize(nextEvent.event);

@@ -35,7 +35,7 @@ public class NexmarkSourceFunctionITCase {
 		NexmarkConfiguration nexmarkConfiguration = new NexmarkConfiguration();
 		nexmarkConfiguration.bidProportion = 46;
 		GeneratorConfig generatorConfig = new GeneratorConfig(
-			nexmarkConfiguration, System.currentTimeMillis(), 1, 100, 1);
+			nexmarkConfiguration,1, 100, 1);
 		env.addSource(new NexmarkSourceFunction<>(
 				generatorConfig,
 				(EventDeserializer<String>) Event::toString,

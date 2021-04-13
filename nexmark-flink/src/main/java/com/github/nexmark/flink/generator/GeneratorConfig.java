@@ -56,9 +56,6 @@ public class GeneratorConfig implements Serializable {
   /** Delay before changing the current inter-event delay. */
   private final long stepLengthSec;
 
-  /** Time for first event (ms since epoch). */
-  public final long baseTime;
-
   /**
    * Event id of first event to be generated. Event ids are unique over all generators, and are used
    * as a seed to generate each event's data.
@@ -86,9 +83,10 @@ public class GeneratorConfig implements Serializable {
    */
   private final long eventsPerEpoch;
 
+  private final int numCategories;
+
   public GeneratorConfig(
       NexmarkConfiguration configuration,
-      long baseTime,
       long firstEventId,
       long maxEventsOrZero,
       long firstEventNumber) {
@@ -103,7 +101,6 @@ public class GeneratorConfig implements Serializable {
     this.interEventDelayUs = new double[1];
     this.interEventDelayUs[0] = 1000000.0  / configuration.firstEventRate  * configuration.numEventGenerators;
     this.stepLengthSec = configuration.rateShape.stepLengthSec(configuration.ratePeriodSec);
-    this.baseTime = baseTime;
     this.firstEventId = firstEventId;
     if (maxEventsOrZero == 0) {
       // Scale maximum down to avoid overflow in getEstimatedSizeBytes.
@@ -122,13 +119,14 @@ public class GeneratorConfig implements Serializable {
     long epochPeriodMs = 0;
     this.eventsPerEpoch = eventsPerEpoch;
     this.epochPeriodMs = epochPeriodMs;
+    this.numCategories = configuration.numCategories;
   }
 
   /** Return a copy of this config. */
   public GeneratorConfig copy() {
     GeneratorConfig result;
     result =
-        new GeneratorConfig(configuration, baseTime, firstEventId, maxEvents, firstEventNumber);
+        new GeneratorConfig(configuration, firstEventId, maxEvents, firstEventNumber);
     return result;
   }
 
@@ -160,7 +158,7 @@ public class GeneratorConfig implements Serializable {
   /** Return copy of this config except with given parameters. */
   public GeneratorConfig copyWith(long firstEventId, long maxEvents, long firstEventNumber) {
     return new GeneratorConfig(
-            configuration, baseTime, firstEventId, maxEvents, firstEventNumber);
+            configuration, firstEventId, maxEvents, firstEventNumber);
   }
 
   /** Return an estimate of the bytes needed by {@code numEvents}. */
@@ -180,6 +178,10 @@ public class GeneratorConfig implements Serializable {
 
   public int getNumActivePeople() {
     return configuration.numActivePeople;
+  }
+
+  public int getNumCategories() {
+    return configuration.numCategories;
   }
 
   public int getHotSellersRatio() {
@@ -204,6 +206,18 @@ public class GeneratorConfig implements Serializable {
 
   public int getAvgAuctionByteSize() {
     return configuration.avgAuctionByteSize;
+  }
+
+  public boolean getExtendedBidMode() {
+    return configuration.extendedBidMode;
+  }
+
+  public long getBaseTime() {
+    return configuration.baseTime;
+  }
+
+  public boolean getSimulationMode() {
+    return configuration.simulationMode;
   }
 
   public double getProbDelayedEvent() {
@@ -263,7 +277,7 @@ public class GeneratorConfig implements Serializable {
    * What timestamp should the event with {@code eventNumber} have for this generator?
    */
   public long timestampForEvent(long eventNumber) {
-      return baseTime + (long)(eventNumber * interEventDelayUs[0]) / 1000L;
+      return configuration.baseTime + (long)(eventNumber * interEventDelayUs[0]) / 1000L;
   }
 
   @Override
@@ -281,13 +295,26 @@ public class GeneratorConfig implements Serializable {
         firstEventNumber == that.firstEventNumber &&
         epochPeriodMs == that.epochPeriodMs &&
         eventsPerEpoch == that.eventsPerEpoch &&
+        numCategories == that.numCategories &&
         Objects.equals(configuration, that.configuration) &&
         Arrays.equals(interEventDelayUs, that.interEventDelayUs);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(personProportion, auctionProportion, bidProportion, totalProportion, configuration, stepLengthSec, firstEventId, maxEvents, firstEventNumber, epochPeriodMs, eventsPerEpoch);
+    int result = Objects.hash(
+        personProportion,
+        auctionProportion,
+        bidProportion,
+        totalProportion,
+        configuration,
+        stepLengthSec,
+        firstEventId,
+        maxEvents,
+        firstEventNumber,
+        epochPeriodMs,
+        numCategories,
+        eventsPerEpoch);
     result = 31 * result + Arrays.hashCode(interEventDelayUs);
     return result;
   }
@@ -308,8 +335,6 @@ public class GeneratorConfig implements Serializable {
     sb.append("]");
     sb.append(";stepLengthSec:");
     sb.append(stepLengthSec);
-    sb.append(";baseTime:");
-    sb.append(baseTime);
     sb.append(";firstEventId:");
     sb.append(firstEventId);
     sb.append(";maxEvents:");
@@ -320,6 +345,8 @@ public class GeneratorConfig implements Serializable {
     sb.append(epochPeriodMs);
     sb.append(";eventsPerEpoch:");
     sb.append(eventsPerEpoch);
+    sb.append(";numCategories:");
+    sb.append(numCategories);
     sb.append("}");
     return sb.toString();
   }

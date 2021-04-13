@@ -60,7 +60,7 @@ public class CpuMetricReceiver implements Closeable {
 			InetAddress address = InetAddress.getByName(host);
 			server = new ServerSocket(port, 10, address);
 		} catch (IOException e) {
-			throw new RuntimeException("Could not open socket to receive back cpu metrics.");
+			throw new RuntimeException("Could not open socket to receive back cpu metrics.", e);
 		}
 	}
 

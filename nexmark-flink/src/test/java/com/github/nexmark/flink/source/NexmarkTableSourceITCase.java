@@ -24,11 +24,43 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class NexmarkTableSourceITCase {
 
 	private StreamExecutionEnvironment env;
 	private StreamTableEnvironment tEnv;
+
+	@Parameterized.Parameter(0)
+	public boolean useExtendedBidMode;
+
+	@Parameterized.Parameters(name = "useExtendedBidMode = {0}")
+	public static Object[] parameters() {
+		return new Object[][] {
+				new Object[] {false},
+				new Object[] {true}
+		};
+	}
+
+	private final String bidSchema =
+			"    bid ROW<\n" +
+			"        auction  BIGINT,\n" +
+			"        bidder  BIGINT,\n" +
+			"        price  BIGINT,\n" +
+			"        dateTime  TIMESTAMP(3),\n" +
+			"        extra  VARCHAR>\n";
+
+	private final String extendedBidSchema =
+			"    bid ROW<\n" +
+			"        auction  BIGINT,\n" +
+			"        seller BIGINT,\n" +
+			"        bidder  BIGINT,\n" +
+			"        category BIGINT,\n" +
+			"        price  BIGINT,\n" +
+			"        dateTime  TIMESTAMP(3),\n" +
+			"        extra  VARCHAR>\n" ;
 
 	@Before
 	public void before() {
@@ -38,38 +70,40 @@ public class NexmarkTableSourceITCase {
 		env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
 		env.getCheckpointConfig().setCheckpointInterval(1000L);
 
-		tEnv.executeSql("CREATE TABLE nexmark (\n" +
-			"    event_type int,\n" +
-			"    person ROW<\n" +
-			"        id  BIGINT,\n" +
-			"        name  VARCHAR,\n" +
-			"        emailAddress  VARCHAR,\n" +
-			"        creditCard  VARCHAR,\n" +
-			"        city  VARCHAR,\n" +
-			"        state  VARCHAR,\n" +
-			"        dateTime TIMESTAMP(3),\n" +
-			"        extra  VARCHAR>,\n" +
-			"    auction ROW<\n" +
-			"        id  BIGINT,\n" +
-			"        itemName  VARCHAR,\n" +
-			"        description  VARCHAR,\n" +
-			"        initialBid  BIGINT,\n" +
-			"        reserve  BIGINT,\n" +
-			"        dateTime  TIMESTAMP(3),\n" +
-			"        expires  TIMESTAMP(3),\n" +
-			"        seller  BIGINT,\n" +
-			"        category  BIGINT,\n" +
-			"        extra  VARCHAR>,\n" +
-			"    bid ROW<\n" +
-			"        auction  BIGINT,\n" +
-			"        bidder  BIGINT,\n" +
-			"        price  BIGINT,\n" +
-			"        dateTime  TIMESTAMP(3),\n" +
-			"        extra  VARCHAR>\n" +
-			") WITH (\n" +
-			"    'connector' = 'nexmark',\n" +
-			"    'events.num' = '100'\n" +
-			")");
+		String sourceTemplate = "CREATE TABLE nexmark (\n" +
+				"    event_type int,\n" +
+				"    person ROW<\n" +
+				"        id  BIGINT,\n" +
+				"        name  VARCHAR,\n" +
+				"        emailAddress  VARCHAR,\n" +
+				"        creditCard  VARCHAR,\n" +
+				"        city  VARCHAR,\n" +
+				"        state  VARCHAR,\n" +
+				"        dateTime TIMESTAMP(3),\n" +
+				"        extra  VARCHAR>,\n" +
+				"    auction ROW<\n" +
+				"        id  BIGINT,\n" +
+				"        itemName  VARCHAR,\n" +
+				"        description  VARCHAR,\n" +
+				"        initialBid  BIGINT,\n" +
+				"        reserve  BIGINT,\n" +
+				"        dateTime  TIMESTAMP(3),\n" +
+				"        expires  TIMESTAMP(3),\n" +
+				"        seller  BIGINT,\n" +
+				"        category  BIGINT,\n" +
+				"        extra  VARCHAR>,\n" +
+				"%s" +
+				") WITH (\n" +
+				"    'connector' = 'nexmark',\n" +
+				"    'events.num' = '100',\n" +
+				"    'bid.extended.mode' = '%s'\n" +
+				")";
+
+		if (useExtendedBidMode) {
+			tEnv.executeSql(String.format(sourceTemplate, extendedBidSchema, true));
+		} else {
+			tEnv.executeSql(String.format(sourceTemplate, bidSchema, false));
+		}
 		tEnv.executeSql("CREATE VIEW person AS\n" +
 			"SELECT t.person.* FROM nexmark AS t WHERE event_type = 0");
 		tEnv.executeSql("CREATE VIEW auction AS\n" +
