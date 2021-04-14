@@ -28,23 +28,32 @@ import java.util.LinkedHashMap;
 public class BenchmarkTest {
 
 	@Test
-	public void testPrintSummary() {
+	public void testPrintSummaryInPrettyMode() {
+		testPrintSummary(false);
+	}
+
+	@Test
+	public void testPrintSummaryInPreciseMode() {
+		testPrintSummary(true);
+	}
+
+	private void testPrintSummary(boolean mode) {
 		LinkedHashMap<String, BenchmarkMetric> totalMetrics = new LinkedHashMap<>();
-		totalMetrics.put("q0", new BenchmarkMetric(1, 8.4));
-		totalMetrics.put("q1", new BenchmarkMetric(10, 18.4));
-		totalMetrics.put("q2", new BenchmarkMetric(100.0, 8.4));
-		totalMetrics.put("q3", new BenchmarkMetric(1000.0, 8.4));
-		totalMetrics.put("q4", new BenchmarkMetric(10_000.0, 8.4));
-		totalMetrics.put("q5", new BenchmarkMetric(100_000.0, 8.4));
-		totalMetrics.put("q6", new BenchmarkMetric(1_000_000.0, 8.4));
-		totalMetrics.put("q7", new BenchmarkMetric(10_000_000.0, 8.23));
-		totalMetrics.put("q8", new BenchmarkMetric(100_000_000.0, 8.4));
-		totalMetrics.put("q9", new BenchmarkMetric(1_000_000_000.0, 8.4));
-		totalMetrics.put("q10", new BenchmarkMetric(10_000_000_000.0, 8.4));
-		totalMetrics.put("q11", new BenchmarkMetric(100_000_000_000.0, 8.419));
-		totalMetrics.put("q12", new BenchmarkMetric(100_000_000.0, 8.4));
-		totalMetrics.put("q13", new BenchmarkMetric(10_000_000.0, 8.4));
-		totalMetrics.put("q14", new BenchmarkMetric(1_000_000.0, 8.4));
+		totalMetrics.put("q0", new BenchmarkMetric(1, 8.4, mode));
+		totalMetrics.put("q1", new BenchmarkMetric(10, 18.4, mode));
+		totalMetrics.put("q2", new BenchmarkMetric(100.0, 8.4, mode));
+		totalMetrics.put("q3", new BenchmarkMetric(1000.0, 8.4, mode));
+		totalMetrics.put("q4", new BenchmarkMetric(10_000.0, 8.4, mode));
+		totalMetrics.put("q5", new BenchmarkMetric(100_000.0, 8.4, mode));
+		totalMetrics.put("q6", new BenchmarkMetric(1_000_000.0, 8.4, mode));
+		totalMetrics.put("q7", new BenchmarkMetric(10_000_000.0, 8.23, mode));
+		totalMetrics.put("q8", new BenchmarkMetric(100_000_000.0, 8.4, mode));
+		totalMetrics.put("q9", new BenchmarkMetric(1_000_000_000.0, 8.4, mode));
+		totalMetrics.put("q10", new BenchmarkMetric(10_000_000_000.0, 8.4, mode));
+		totalMetrics.put("q11", new BenchmarkMetric(100_000_000_000.0, 8.419, mode));
+		totalMetrics.put("q12", new BenchmarkMetric(100_000_000.0, 8.4, mode));
+		totalMetrics.put("q13", new BenchmarkMetric(10_000_000.0, 8.4, mode));
+		totalMetrics.put("q14", new BenchmarkMetric(1_000_000.0, 8.4, mode));
 		Benchmark.printSummary(totalMetrics);
 	}
 
