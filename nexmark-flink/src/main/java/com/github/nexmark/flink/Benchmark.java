@@ -174,15 +174,25 @@ public class Benchmark {
 		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores", " Cores/1m_events");
 		printLine('-', "+", itemMaxLength, "", "", "", "", "");
 
+		long totalTpsPerCore = 0;
+		double totalCoresPerMillionEvents = 0;
 		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
 			JobBenchmarkMetric metric = entry.getValue();
 			printLine(' ', "|", itemMaxLength,
 				entry.getKey(),
-				metric.getThroughput(),
+				metric.getPrettyThroughput(),
 				metric.getPrettyCpu(),
 				metric.getPrettyTpsPerCore(),
-				metric.getCoresPerMillionEvents());
+				metric.getPrettyCoresPerMillionEvents());
+			totalTpsPerCore += metric.getTpsPerCore();
+			totalCoresPerMillionEvents += metric.getCoresPerMillionEvents();
 		}
+		printLine(' ', "|", itemMaxLength,
+				"Total",
+				"-",
+				"-",
+				BenchmarkMetric.formatLongValue(totalTpsPerCore),
+				BenchmarkMetric.formatDoubleValue(totalCoresPerMillionEvents));
 		printLine('-', "+", itemMaxLength, "", "", "", "", "");
 		System.err.println();
 	}

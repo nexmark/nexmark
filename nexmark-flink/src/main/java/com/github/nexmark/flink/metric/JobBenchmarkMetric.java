@@ -21,6 +21,7 @@ package com.github.nexmark.flink.metric;
 import java.util.Objects;
 
 import static com.github.nexmark.flink.metric.BenchmarkMetric.NUMBER_FORMAT;
+import static com.github.nexmark.flink.metric.BenchmarkMetric.formatDoubleValue;
 import static com.github.nexmark.flink.metric.BenchmarkMetric.formatLongValue;
 
 public class JobBenchmarkMetric {
@@ -40,11 +41,11 @@ public class JobBenchmarkMetric {
 		this.timeMills = timeMills;
 	}
 
-	public String getThroughput() {
-		return formatLongValue(throughput());
+	public String getPrettyThroughput() {
+		return formatLongValue(getThroughput());
 	}
 
-	public long throughput() {
+	private long getThroughput() {
 		return eventsNum == 0 ?
 				(long) tps :
 				eventsNum / (timeMills / 1000);
@@ -59,13 +60,20 @@ public class JobBenchmarkMetric {
 	}
 
 	public String getPrettyTpsPerCore() {
-		long result = (long) (throughput() / cpu);
-		return formatLongValue(result);
+		return formatLongValue(getTpsPerCore());
 	}
 
-	public String getCoresPerMillionEvents() {
-		double millions = throughput() / 1_000_000.0;
-		return String.format("%.3f", cpu / millions);
+	public long getTpsPerCore() {
+		return (long) (getThroughput() / cpu);
+	}
+
+	public String getPrettyCoresPerMillionEvents() {
+		return formatDoubleValue(getCoresPerMillionEvents());
+	}
+
+	public double getCoresPerMillionEvents() {
+		double millions = getThroughput() / 1_000_000.0;
+		return cpu / millions;
 	}
 
 	@Override

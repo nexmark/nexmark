@@ -165,7 +165,7 @@ public class MetricReporter {
 		String message;
 		if (eventsNum == 0) {
 			message = String.format("Summary Average: Throughput=%s, Cores=%s",
-					metric.getThroughput(),
+					metric.getPrettyThroughput(),
 					metric.getPrettyCpu());
 		} else {
 			message = String.format("Summary Average: EventsNum=%s, Cores=%s, Time=%s ms",

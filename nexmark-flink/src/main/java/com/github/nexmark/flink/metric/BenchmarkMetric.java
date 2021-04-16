@@ -102,7 +102,11 @@ public class BenchmarkMetric {
 		String suffix = e.getValue();
 
 		long truncated = value / (divideBy / 10); //the number part of the output times 10
-		boolean hasDecimal = truncated < 100 && (truncated / 10d) != (truncated / 10);
+		boolean hasDecimal = truncated < 1000 && truncated % 10 != 0;
 		return hasDecimal ? (truncated / 10d) + " " + suffix : (truncated / 10) + " " + suffix;
+	}
+
+	public static String formatDoubleValue(double value) {
+		return String.format("%.3f", value);
 	}
 }
