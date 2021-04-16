@@ -24,7 +24,7 @@ public class CpuMonitor {
 		ProcfsBasedProcessTree procfsBasedProcessTree = new ProcfsBasedProcessTree(args[0]);
 		procfsBasedProcessTree.updateProcessTree();
 		while (true) {
-			Thread.sleep(1000);
+			Thread.sleep(100);
 			procfsBasedProcessTree.updateProcessTree();
 			System.out.println(System.currentTimeMillis() / 1000 +" "+ procfsBasedProcessTree.getCpuUsagePercent());
 		}

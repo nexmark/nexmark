@@ -36,6 +36,7 @@ public class WorkloadSuiteTest {
 	public void testCustomizedConf() {
 		Configuration conf = new Configuration();
 		conf.setString("nexmark.workload.suite.8m.tps", "8000000");
+		conf.setString("nexmark.workload.suite.8m.events.num", "80000000");
 		conf.setString("nexmark.workload.suite.8m.queries", "q0,q1,q2,q10,q12,q13,q14");
 		conf.setString("nexmark.workload.suite.2m-no-bid.tps", "2000000");
 		conf.setString("nexmark.workload.suite.2m-no-bid.percentage", "bid:0, auction:9, person:1");
@@ -46,10 +47,10 @@ public class WorkloadSuiteTest {
 		conf.setString("nexmark.workload.suite.1m.queries", "q4,q7,q9,q11");
 		WorkloadSuite suite = WorkloadSuite.fromConf(conf);
 
-		Workload load8m = new Workload(8000000, 1, 3, 46);
-		Workload load2mNoBid = new Workload(2000000, 1, 9, 0);
-		Workload load2m = new Workload(2000000, 1, 3, 46);
-		Workload load1m = new Workload(1000000, 1, 3, 46);
+		Workload load8m = new Workload(8000000, 80000000, 1, 3, 46);
+		Workload load2mNoBid = new Workload(2000000, 0, 1, 9, 0);
+		Workload load2m = new Workload(2000000, 0, 1, 3, 46);
+		Workload load1m = new Workload(1000000, 0, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
 		query2Workload.put("q0", load8m);
@@ -83,7 +84,7 @@ public class WorkloadSuiteTest {
 		Configuration conf = NexmarkGlobalConfiguration.loadConfiguration(confDir.getPath());
 		WorkloadSuite suite = WorkloadSuite.fromConf(conf);
 
-		Workload load = new Workload(10000000, 1, 3, 46);
+		Workload load = new Workload(10000000, 100000000, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
 		query2Workload.put("q0", load);

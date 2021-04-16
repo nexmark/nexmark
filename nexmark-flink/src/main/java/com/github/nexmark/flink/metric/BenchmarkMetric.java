@@ -49,11 +49,6 @@ public class BenchmarkMetric {
 		return NUMBER_FORMAT.format(cpu);
 	}
 
-	public String getPrettyTpsPerCore() {
-		long result = (long) (tps / cpu);
-		return formatLongValue(result);
-	}
-
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -84,7 +79,7 @@ public class BenchmarkMetric {
 	// -------------------------------------------------------------------------------------------
 	// Pretty Utilities
 	// -------------------------------------------------------------------------------------------
-	private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
+	public static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
 	private static final NavigableMap<Long, String> SUFFIXES = new TreeMap<>();
 	static {
 		SUFFIXES.put(1_000L, "K");

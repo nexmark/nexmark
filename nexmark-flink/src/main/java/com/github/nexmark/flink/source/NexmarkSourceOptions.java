@@ -68,7 +68,7 @@ public class NexmarkSourceOptions {
 	public static final ConfigOption<Integer> NEXT_EVENT_RATE = ConfigOptions
 		.key("next-event.rate")
 		.intType()
-		.defaultValue(10000);
+		.defaultValue(10_000_000); // default large value, back pressure.
 
 	/**
 	 * @see NexmarkConfiguration#avgPersonByteSize

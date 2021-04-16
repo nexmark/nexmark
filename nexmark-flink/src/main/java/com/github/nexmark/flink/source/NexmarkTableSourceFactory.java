@@ -25,7 +25,6 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
-import org.apache.flink.table.utils.TableSchemaUtils;
 
 import com.github.nexmark.flink.generator.GeneratorConfig;
 import com.github.nexmark.flink.NexmarkConfiguration;
@@ -41,8 +40,9 @@ public class NexmarkTableSourceFactory implements DynamicTableSourceFactory {
 		final FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
 		final ReadableConfig config = helper.getOptions();
 		helper.validate();
-		// validate schema
-		validateSchema(TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema()));
+
+		// for compatibility reason of "context.getCatalogTable()", do not validate schema.
+		// validateSchema(TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema()));
 
 		int parallelism = context.getConfiguration().get(CoreOptions.DEFAULT_PARALLELISM);
 		NexmarkConfiguration nexmarkConf = NexmarkSourceOptions.convertToNexmarkConfiguration(config);

@@ -22,6 +22,7 @@ import org.apache.flink.configuration.Configuration;
 
 import com.github.nexmark.flink.metric.BenchmarkMetric;
 import com.github.nexmark.flink.metric.FlinkRestClient;
+import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
 import com.github.nexmark.flink.metric.cpu.CpuMetricReceiver;
 import com.github.nexmark.flink.utils.NexmarkGlobalConfiguration;
@@ -94,7 +95,7 @@ public class Benchmark {
 		WorkloadSuite workloadSuite = WorkloadSuite.fromConf(nexmarkConf);
 
 		// start to run queries
-		LinkedHashMap<String, BenchmarkMetric> totalMetrics = new LinkedHashMap<>();
+		LinkedHashMap<String, JobBenchmarkMetric> totalMetrics = new LinkedHashMap<>();
 		for (String queryName : queries) {
 			Workload workload = workloadSuite.getQueryWorkload(queryName);
 			if (workload == null) {
@@ -114,7 +115,7 @@ public class Benchmark {
 				flinkDist,
 				reporter,
 				flinkRestClient);
-			BenchmarkMetric metric = runner.run();
+			JobBenchmarkMetric metric = runner.run();
 			totalMetrics.put(queryName, metric);
 		}
 
@@ -162,26 +163,27 @@ public class Benchmark {
 		return queryList;
 	}
 
-	public static void printSummary(LinkedHashMap<String, BenchmarkMetric> totalMetrics) {
+	public static void printSummary(LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
 		if (totalMetrics.isEmpty()) {
 			return;
 		}
 		System.err.println("-------------------------------- Nexmark Results --------------------------------");
 		int itemMaxLength = 20;
 		System.err.println();
-		printLine('-', "+", itemMaxLength, "", "", "", "");
-		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores");
-		printLine('-', "+", itemMaxLength, "", "", "", "");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "");
+		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores", " Cores/1m_events");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "");
 
-		for (Map.Entry<String, BenchmarkMetric> entry : totalMetrics.entrySet()) {
-			BenchmarkMetric metric = entry.getValue();
+		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
+			JobBenchmarkMetric metric = entry.getValue();
 			printLine(' ', "|", itemMaxLength,
 				entry.getKey(),
-				metric.getPrettyTps(),
+				metric.getThroughput(),
 				metric.getPrettyCpu(),
-				metric.getPrettyTpsPerCore());
+				metric.getPrettyTpsPerCore(),
+				metric.getCoresPerMillionEvents());
 		}
-		printLine('-', "+", itemMaxLength, "", "", "", "");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "");
 		System.err.println();
 	}
 

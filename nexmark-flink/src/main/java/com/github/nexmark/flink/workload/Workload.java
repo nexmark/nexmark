@@ -25,12 +25,14 @@ import java.util.Objects;
 public class Workload {
 
 	private final long tps;
+	private final long eventsNum;
 	private final int personProportion;
 	private final int auctionProportion;
 	private final int bidProportion;
 
-	public Workload(long tps, int personProportion, int auctionProportion, int bidProportion) {
+	public Workload(long tps, long eventsNum, int personProportion, int auctionProportion, int bidProportion) {
 		this.tps = tps;
+		this.eventsNum = eventsNum;
 		this.personProportion = personProportion;
 		this.auctionProportion = auctionProportion;
 		this.bidProportion = bidProportion;
@@ -38,6 +40,10 @@ public class Workload {
 
 	public long getTps() {
 		return tps;
+	}
+
+	public long getEventsNum() {
+		return eventsNum;
 	}
 
 	public int getPersonProportion() {
@@ -58,6 +64,7 @@ public class Workload {
 		if (o == null || getClass() != o.getClass()) return false;
 		Workload workload = (Workload) o;
 		return tps == workload.tps &&
+			eventsNum == workload.eventsNum &&
 			personProportion == workload.personProportion &&
 			auctionProportion == workload.auctionProportion &&
 			bidProportion == workload.bidProportion;
@@ -65,13 +72,14 @@ public class Workload {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(tps, personProportion, auctionProportion, bidProportion);
+		return Objects.hash(tps, eventsNum, personProportion, auctionProportion, bidProportion);
 	}
 
 	public String getSummaryString() {
 		return String.format(
-			"[tps=%s, percentage=bid:%s,auction:%s,person:%s]",
+			"[tps=%s, eventsNum=%s, percentage=bid:%s,auction:%s,person:%s]",
 			BenchmarkMetric.formatLongValue(tps),
+			BenchmarkMetric.formatLongValue(eventsNum),
 			bidProportion,
 			auctionProportion,
 			personProportion);
@@ -81,6 +89,7 @@ public class Workload {
 	public String toString() {
 		return "Workload{" +
 			"tps=" + tps +
+			", eventsNum=" + eventsNum +
 			", personProportion=" + personProportion +
 			", auctionProportion=" + auctionProportion +
 			", bidProportion=" + bidProportion +

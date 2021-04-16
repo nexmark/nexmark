@@ -20,6 +20,7 @@ package com.github.nexmark.flink;
 
 import com.github.nexmark.flink.metric.BenchmarkMetric;
 import com.github.nexmark.flink.metric.FlinkRestClient;
+import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
 import com.github.nexmark.flink.utils.AutoClosableProcess;
 import com.github.nexmark.flink.workload.Workload;
@@ -58,7 +59,7 @@ public class QueryRunner {
 		this.flinkRestClient = flinkRestClient;
 	}
 
-	public BenchmarkMetric run() {
+	public JobBenchmarkMetric run() {
 		try {
 			System.out.println("==================================================================");
 			System.out.println("Start to run query " + queryName + " with workload " + workload.getSummaryString());
@@ -66,11 +67,13 @@ public class QueryRunner {
 			LOG.info("Start to run query " + queryName + " with workload " + workload.getSummaryString());
 			runInternal();
 			// blocking until collect enough metrics
-			BenchmarkMetric metrics = metricReporter.reportMetric();
+			JobBenchmarkMetric metrics = metricReporter.reportMetric(workload.getEventsNum());
 			// cancel job
 			System.out.println("Stop job query " + queryName);
 			LOG.info("Stop job query " + queryName);
-			flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
+			if (flinkRestClient.isJobRunning()) {
+				flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
+			}
 			return metrics;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -92,6 +95,7 @@ public class QueryRunner {
 		varsMap.put("SUBMIT_TIME", submitTime.toString());
 		varsMap.put("FLINK_HOME", flinkDist.toFile().getAbsolutePath());
 		varsMap.put("TPS", String.valueOf(workload.getTps()));
+		varsMap.put("EVENTS_NUM", String.valueOf(workload.getEventsNum()));
 		varsMap.put("PERSON_PROPORTION", String.valueOf(workload.getPersonProportion()));
 		varsMap.put("AUCTION_PROPORTION", String.valueOf(workload.getAuctionProportion()));
 		varsMap.put("BID_PROPORTION", String.valueOf(workload.getBidProportion()));

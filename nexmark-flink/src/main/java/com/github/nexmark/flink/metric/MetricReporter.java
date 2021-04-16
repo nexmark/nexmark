@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -58,7 +59,7 @@ public class MetricReporter {
 		this.metrics = new ArrayList<>();
 	}
 
-	private void submitMonitorThread() {
+	private void submitMonitorThread(long eventsNum) {
 
 		String jobId;
 		String vertexId;
@@ -74,7 +75,7 @@ public class MetricReporter {
 			} else {
 				// wait for the job startup
 				try {
-					Thread.sleep(5000);
+					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);
 				}
@@ -82,7 +83,7 @@ public class MetricReporter {
 		}
 
 		this.service.scheduleWithFixedDelay(
-			new MetricCollector(jobId, vertexId, metricName),
+			new MetricCollector(jobId, vertexId, metricName, eventsNum),
 			0L,
 			monitorInterval.toMillis(),
 			TimeUnit.MILLISECONDS
@@ -105,7 +106,7 @@ public class MetricReporter {
 		Deadline deadline = Deadline.fromNow(duration);
 		while (deadline.hasTimeLeft()) {
 			try {
-				Thread.sleep(1000L);
+				Thread.sleep(100L);
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
@@ -115,12 +116,32 @@ public class MetricReporter {
 		}
 	}
 
-	public BenchmarkMetric reportMetric() {
-		System.out.println(String.format("Monitor metrics after %s minutes.", monitorDelay.toMinutes()));
+	private boolean isJobRunning() {
+		return flinkRestClient.isJobRunning();
+	}
+
+	private void waitForOrJobFinish(Duration duration) {
+		Deadline deadline = Deadline.fromNow(duration);
+		while (deadline.hasTimeLeft() && isJobRunning()) {
+			try {
+				Thread.sleep(100L);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+			if (error != null) {
+				throw new RuntimeException(error);
+			}
+		}
+	}
+
+	public JobBenchmarkMetric reportMetric(long eventsNum) {
+		System.out.printf("Monitor metrics after %s seconds.%n", monitorDelay.getSeconds());
+		long startTime = System.currentTimeMillis();
 		waitFor(monitorDelay);
-		System.out.println(String.format("Start to monitor metrics for %s minutes.", monitorDuration.toMinutes()));
-		submitMonitorThread();
-		waitFor(monitorDuration);
+		System.out.printf("Start to monitor metrics for %s seconds.%n", monitorDuration.getSeconds());
+		submitMonitorThread(eventsNum);
+		waitForOrJobFinish(monitorDuration);
+		long endTime = System.currentTimeMillis();
 
 		// cleanup the resource
 		this.close();
@@ -138,10 +159,21 @@ public class MetricReporter {
 
 		double avgTps = sumTps / metrics.size();
 		double avgCpu = sumCpu / metrics.size();
-		BenchmarkMetric metric = new BenchmarkMetric(avgTps, avgCpu);
-		String message = String.format("Summary Average: Throughput=%s, Cores=%s",
-			metric.getPrettyTps(),
-			metric.getPrettyCpu());
+		JobBenchmarkMetric metric = new JobBenchmarkMetric(
+				avgTps, avgCpu, eventsNum, endTime - startTime);
+
+		String message;
+		if (eventsNum == 0) {
+			message = String.format("Summary Average: Throughput=%s, Cores=%s",
+					metric.getThroughput(),
+					metric.getPrettyCpu());
+		} else {
+			message = String.format("Summary Average: EventsNum=%s, Cores=%s, Time=%s ms",
+					eventsNum,
+					metric.getPrettyCpu(),
+					metric.getTimeMills());
+		}
+
 		System.out.println(message);
 		LOG.info(message);
 		return metric;
@@ -155,11 +187,13 @@ public class MetricReporter {
 		private final String jobId;
 		private final String vertexId;
 		private final String metricName;
+		private final long eventsNum;
 
-		private MetricCollector(String jobId, String vertexId, String metricName) {
+		private MetricCollector(String jobId, String vertexId, String metricName, long eventsNum) {
 			this.jobId = jobId;
 			this.vertexId = vertexId;
 			this.metricName = metricName;
+			this.eventsNum = eventsNum;
 		}
 
 		@Override
@@ -172,10 +206,11 @@ public class MetricReporter {
 				// it's thread-safe to update metrics
 				metrics.add(metric);
 				// logging
-				String message = String.format("Current Throughput=%s, Cores=%s (%s TMs)",
-					metric.getPrettyTps(),
-					metric.getPrettyCpu(),
-					tms);
+				String message = eventsNum == 0 ?
+						String.format("Current Throughput=%s, Cores=%s (%s TMs)",
+								metric.getPrettyTps(), metric.getPrettyCpu(), tms) :
+						String.format("Current Cores=%s (%s TMs)", metric.getPrettyCpu(), tms);
+
 				System.out.println(message);
 				LOG.info(message);
 			} catch (Exception e) {
