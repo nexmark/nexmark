@@ -44,6 +44,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.github.nexmark.flink.metric.BenchmarkMetric.NUMBER_FORMAT;
+import static com.github.nexmark.flink.metric.BenchmarkMetric.formatDoubleValue;
+
 /**
  * The entry point to run benchmark for nexmark queries.
  */
@@ -170,31 +173,68 @@ public class Benchmark {
 		System.err.println("-------------------------------- Nexmark Results --------------------------------");
 		int itemMaxLength = 20;
 		System.err.println();
+		if (totalMetrics.values().iterator().next().getEventsNum() != 0) {
+			printEventNumSummary(itemMaxLength, totalMetrics);
+		} else {
+			printTPSSummary(itemMaxLength, totalMetrics);
+		}
+		System.err.println();
+	}
+
+	private static void printEventNumSummary(
+			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
 		printLine('-', "+", itemMaxLength, "", "", "", "", "");
-		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores", " Cores/1m_events");
+		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)");
 		printLine('-', "+", itemMaxLength, "", "", "", "", "");
 
+		long totalEventsNum = 0;
+		double totalCpus = 0;
+		double totalTimeSeconds = 0;
+		double totalCoresMultiplyTimeSeconds = 0;
+		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
+			JobBenchmarkMetric metric = entry.getValue();
+			printLine(' ', "|", itemMaxLength,
+					entry.getKey(),
+					NUMBER_FORMAT.format(metric.getEventsNum()),
+					NUMBER_FORMAT.format(metric.getCpu()),
+					formatDoubleValue(metric.getTimeSeconds()),
+					formatDoubleValue(metric.getCoresMultiplyTimeSeconds()));
+			totalEventsNum += metric.getEventsNum();
+			totalCpus += metric.getCpu();
+			totalTimeSeconds += metric.getTimeSeconds();
+			totalCoresMultiplyTimeSeconds += metric.getCoresMultiplyTimeSeconds();
+		}
+		printLine(' ', "|", itemMaxLength,
+				"Total",
+				NUMBER_FORMAT.format(totalEventsNum),
+				formatDoubleValue(totalCpus),
+				formatDoubleValue(totalTimeSeconds),
+				formatDoubleValue(totalCoresMultiplyTimeSeconds));
+		printLine('-', "+", itemMaxLength, "", "", "", "", "");
+	}
+
+	private static void printTPSSummary(
+			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
+		printLine('-', "+", itemMaxLength, "", "", "", "");
+		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores");
+		printLine('-', "+", itemMaxLength, "", "", "", "");
+
 		long totalTpsPerCore = 0;
-		double totalCoresPerMillionEvents = 0;
 		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
 			JobBenchmarkMetric metric = entry.getValue();
 			printLine(' ', "|", itemMaxLength,
 				entry.getKey(),
-				metric.getPrettyThroughput(),
+				metric.getPrettyTps(),
 				metric.getPrettyCpu(),
-				metric.getPrettyTpsPerCore(),
-				metric.getPrettyCoresPerMillionEvents());
+				metric.getPrettyTpsPerCore());
 			totalTpsPerCore += metric.getTpsPerCore();
-			totalCoresPerMillionEvents += metric.getCoresPerMillionEvents();
 		}
 		printLine(' ', "|", itemMaxLength,
 				"Total",
 				"-",
 				"-",
-				BenchmarkMetric.formatLongValue(totalTpsPerCore),
-				BenchmarkMetric.formatDoubleValue(totalCoresPerMillionEvents));
-		printLine('-', "+", itemMaxLength, "", "", "", "", "");
-		System.err.println();
+				BenchmarkMetric.formatLongValue(totalTpsPerCore));
+		printLine('-', "+", itemMaxLength, "", "", "", "");
 	}
 
 	private static void printLine(

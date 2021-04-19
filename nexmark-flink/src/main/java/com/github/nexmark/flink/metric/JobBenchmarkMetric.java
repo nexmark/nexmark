@@ -21,7 +21,6 @@ package com.github.nexmark.flink.metric;
 import java.util.Objects;
 
 import static com.github.nexmark.flink.metric.BenchmarkMetric.NUMBER_FORMAT;
-import static com.github.nexmark.flink.metric.BenchmarkMetric.formatDoubleValue;
 import static com.github.nexmark.flink.metric.BenchmarkMetric.formatLongValue;
 
 public class JobBenchmarkMetric {
@@ -41,22 +40,24 @@ public class JobBenchmarkMetric {
 		this.timeMills = timeMills;
 	}
 
-	public String getPrettyThroughput() {
-		return formatLongValue(getThroughput());
+	public String getPrettyTps() {
+		return formatLongValue((long) tps);
 	}
 
-	private long getThroughput() {
-		return eventsNum == 0 ?
-				(long) tps :
-				eventsNum / (timeMills / 1000);
+	public long getEventsNum() {
+		return eventsNum;
 	}
 
-	public long getTimeMills() {
-		return timeMills;
+	public double getTimeSeconds() {
+		return timeMills / 1000D;
 	}
 
 	public String getPrettyCpu() {
 		return NUMBER_FORMAT.format(cpu);
+	}
+
+	public double getCpu() {
+		return cpu;
 	}
 
 	public String getPrettyTpsPerCore() {
@@ -64,16 +65,11 @@ public class JobBenchmarkMetric {
 	}
 
 	public long getTpsPerCore() {
-		return (long) (getThroughput() / cpu);
+		return (long) (tps / cpu);
 	}
 
-	public String getPrettyCoresPerMillionEvents() {
-		return formatDoubleValue(getCoresPerMillionEvents());
-	}
-
-	public double getCoresPerMillionEvents() {
-		double millions = getThroughput() / 1_000_000.0;
-		return cpu / millions;
+	public double getCoresMultiplyTimeSeconds() {
+		return cpu * getTimeSeconds();
 	}
 
 	@Override

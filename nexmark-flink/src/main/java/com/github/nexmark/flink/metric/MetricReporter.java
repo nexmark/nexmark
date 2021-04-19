@@ -27,12 +27,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static com.github.nexmark.flink.metric.BenchmarkMetric.NUMBER_FORMAT;
+import static com.github.nexmark.flink.metric.BenchmarkMetric.formatDoubleValue;
 
 /**
  * A reporter to aggregate metrics and report summary results.
@@ -165,13 +167,13 @@ public class MetricReporter {
 		String message;
 		if (eventsNum == 0) {
 			message = String.format("Summary Average: Throughput=%s, Cores=%s",
-					metric.getPrettyThroughput(),
+					metric.getPrettyTps(),
 					metric.getPrettyCpu());
 		} else {
-			message = String.format("Summary Average: EventsNum=%s, Cores=%s, Time=%s ms",
-					eventsNum,
+			message = String.format("Summary Average: EventsNum=%s, Cores=%s, Time=%s s",
+					NUMBER_FORMAT.format(eventsNum),
 					metric.getPrettyCpu(),
-					metric.getTimeMills());
+					formatDoubleValue(metric.getTimeSeconds()));
 		}
 
 		System.out.println(message);
