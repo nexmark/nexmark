@@ -20,6 +20,7 @@ package com.github.nexmark.flink.metric;
 
 import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.util.Preconditions;
 
 import com.github.nexmark.flink.metric.cpu.CpuMetricReceiver;
 import com.github.nexmark.flink.metric.tps.TpsMetric;
@@ -122,9 +123,8 @@ public class MetricReporter {
 		return flinkRestClient.isJobRunning();
 	}
 
-	private void waitForOrJobFinish(Duration duration) {
-		Deadline deadline = Deadline.fromNow(duration);
-		while (deadline.hasTimeLeft() && isJobRunning()) {
+	private void waitForOrJobFinish() {
+		while (isJobRunning()) {
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
@@ -140,9 +140,22 @@ public class MetricReporter {
 		System.out.printf("Monitor metrics after %s seconds.%n", monitorDelay.getSeconds());
 		long startTime = System.currentTimeMillis();
 		waitFor(monitorDelay);
-		System.out.printf("Start to monitor metrics for %s seconds.%n", monitorDuration.getSeconds());
+		if (eventsNum == 0) {
+			System.out.printf("Start to monitor metrics for %s seconds.%n", monitorDuration.getSeconds());
+		} else {
+			System.out.println("Start to monitor metrics until job is finished.");
+		}
 		submitMonitorThread(eventsNum);
-		waitForOrJobFinish(monitorDuration);
+		if (eventsNum == 0) {
+			waitFor(monitorDuration);
+		} else {
+			Preconditions.checkArgument(
+					monitorDuration.toMillis() == Long.MAX_VALUE,
+					"The configuration of monitorDuration is not supported" +
+							" in the events number mode.");
+			waitForOrJobFinish();
+		}
+
 		long endTime = System.currentTimeMillis();
 
 		// cleanup the resource
