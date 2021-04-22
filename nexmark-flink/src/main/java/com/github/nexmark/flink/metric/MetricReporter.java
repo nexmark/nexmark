@@ -122,9 +122,8 @@ public class MetricReporter {
 		return flinkRestClient.isJobRunning();
 	}
 
-	private void waitForOrJobFinish(Duration duration) {
-		Deadline deadline = Deadline.fromNow(duration);
-		while (deadline.hasTimeLeft() && isJobRunning()) {
+	private void waitForOrJobFinish() {
+		while (isJobRunning()) {
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
@@ -146,7 +145,12 @@ public class MetricReporter {
 			System.out.println("Start to monitor metrics until job is finished.");
 		}
 		submitMonitorThread(eventsNum);
-		waitForOrJobFinish(monitorDuration);
+		if (eventsNum == 0) {
+			waitFor(monitorDuration);
+		} else {
+			waitForOrJobFinish();
+		}
+
 		long endTime = System.currentTimeMillis();
 
 		// cleanup the resource
