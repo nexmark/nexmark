@@ -16,12 +16,10 @@
 # limitations under the License.
 ################################################################################
 #execution.target: yarn-per-job
-taskmanager.memory.process.size: 4096M
-#taskmanager.memory.task.heap.size: 2048M
-taskmanager.memory.managed.fraction: 0.23
+taskmanager.memory.process.size: 8G
 jobmanager.rpc.address: localhost
 jobmanager.rpc.port: 6123
-jobmanager.memory.process.size: 4096M
+jobmanager.memory.process.size: 8G
 taskmanager.numberOfTaskSlots: 1
 parallelism.default: 8
 io.tmp.dirs: /tmp

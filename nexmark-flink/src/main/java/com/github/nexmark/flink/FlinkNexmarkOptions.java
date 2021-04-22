@@ -31,20 +31,20 @@ public class FlinkNexmarkOptions {
 	public static final ConfigOption<Duration> METRIC_MONITOR_DELAY = ConfigOptions
 		.key("nexmark.metric.monitor.delay")
 		.durationType()
-		.defaultValue(Duration.ofMinutes(3))
-		.withDescription("When to monitor the metrics, default 3min after job is started");
+		.defaultValue(Duration.ofSeconds(10))
+		.withDescription("When to monitor the metrics, default 10secs after job is started");
 
 	public static final ConfigOption<Duration> METRIC_MONITOR_DURATION = ConfigOptions
 		.key("nexmark.metric.monitor.duration")
 		.durationType()
-		.defaultValue(Duration.ofMinutes(3))
-		.withDescription("How long to monitor the metrics, default 3min, " +
-			"i.e. monitor from 3min to 6min after job is started");
+		.defaultValue(Duration.ofMillis(Long.MAX_VALUE))
+		.withDescription("How long to monitor the metrics, default never end, " +
+			"monitor until job is finished.");
 
 	public static final ConfigOption<Duration> METRIC_MONITOR_INTERVAL = ConfigOptions
 		.key("nexmark.metric.monitor.interval")
 		.durationType()
-		.defaultValue(Duration.ofSeconds(10))
+		.defaultValue(Duration.ofSeconds(5))
 		.withDescription("The interval to request the metrics.");
 
 

@@ -33,7 +33,9 @@ import java.util.Set;
 public class WorkloadSuite {
 
 	private static final String WORKLOAD_SUITE_CONF_PREFIX = "nexmark.workload.suite.";
+	private static final String QUERIES_CONF_SUFFIX = ".queries";
 	private static final String TPS_CONF_SUFFIX = ".tps";
+	private static final String EVENTS_NUM_CONF_SUFFIX = "." + NexmarkSourceOptions.EVENTS_NUM.key();
 
 	private final Map<String, Workload> query2Workload;
 
@@ -69,16 +71,23 @@ public class WorkloadSuite {
 		Map<String, String> confMap = nexmarkConf.toMap();
 		Set<String> suites = new HashSet<>();
 		confMap.keySet().forEach(k -> {
-			if (k.startsWith(WORKLOAD_SUITE_CONF_PREFIX) && k.endsWith(TPS_CONF_SUFFIX)) {
-				String suiteName = k.substring(WORKLOAD_SUITE_CONF_PREFIX.length(), k.length() - TPS_CONF_SUFFIX.length());
+			if (k.startsWith(WORKLOAD_SUITE_CONF_PREFIX) && k.endsWith(QUERIES_CONF_SUFFIX)) {
+				String suiteName = k.substring(
+						WORKLOAD_SUITE_CONF_PREFIX.length(),
+						k.length() - QUERIES_CONF_SUFFIX.length());
 				suites.add(suiteName);
 			}
 		});
 
 		Map<String, Workload> query2Workload = new HashMap<>();
 		for (String suiteName : suites) {
-			String tpsKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + TPS_CONF_SUFFIX;
-			long tps = Long.parseLong(confMap.get(tpsKey));
+			long tps = Long.parseLong(confMap.getOrDefault(
+					WORKLOAD_SUITE_CONF_PREFIX + suiteName + TPS_CONF_SUFFIX,
+					NexmarkSourceOptions.NEXT_EVENT_RATE.defaultValue().toString()));
+
+			long eventsNum = Long.parseLong(confMap.getOrDefault(
+					WORKLOAD_SUITE_CONF_PREFIX + suiteName + EVENTS_NUM_CONF_SUFFIX,
+					NexmarkSourceOptions.EVENTS_NUM.defaultValue().toString()));
 
 			int personProportion = NexmarkSourceOptions.PERSON_PROPORTION.defaultValue();
 			int auctionProportion = NexmarkSourceOptions.AUCTION_PROPORTION.defaultValue();
@@ -100,9 +109,10 @@ public class WorkloadSuite {
 					}
 				}
 			}
-			Workload load = new Workload(tps, personProportion, auctionProportion, bidProportion);
+			Workload load = new Workload(
+					tps, eventsNum, personProportion, auctionProportion, bidProportion);
 
-			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + ".queries";
+			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + QUERIES_CONF_SUFFIX;
 			List<String> queries = new ArrayList<>();
 			if (confMap.containsKey(queriesKey)) {
 				String queriesString = removeQuotes(confMap.get(queriesKey));

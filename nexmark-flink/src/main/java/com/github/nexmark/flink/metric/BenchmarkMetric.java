@@ -49,11 +49,6 @@ public class BenchmarkMetric {
 		return NUMBER_FORMAT.format(cpu);
 	}
 
-	public String getPrettyTpsPerCore() {
-		long result = (long) (tps / cpu);
-		return formatLongValue(result);
-	}
-
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -84,7 +79,7 @@ public class BenchmarkMetric {
 	// -------------------------------------------------------------------------------------------
 	// Pretty Utilities
 	// -------------------------------------------------------------------------------------------
-	private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
+	public static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
 	private static final NavigableMap<Long, String> SUFFIXES = new TreeMap<>();
 	static {
 		SUFFIXES.put(1_000L, "K");
@@ -107,7 +102,11 @@ public class BenchmarkMetric {
 		String suffix = e.getValue();
 
 		long truncated = value / (divideBy / 10); //the number part of the output times 10
-		boolean hasDecimal = truncated < 100 && (truncated / 10d) != (truncated / 10);
+		boolean hasDecimal = truncated < 1000 && truncated % 10 != 0;
 		return hasDecimal ? (truncated / 10d) + " " + suffix : (truncated / 10) + " " + suffix;
+	}
+
+	public static String formatDoubleValue(double value) {
+		return String.format("%.3f", value);
 	}
 }

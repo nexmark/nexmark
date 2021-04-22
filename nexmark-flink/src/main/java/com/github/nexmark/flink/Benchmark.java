@@ -19,9 +19,11 @@
 package com.github.nexmark.flink;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.util.Preconditions;
 
 import com.github.nexmark.flink.metric.BenchmarkMetric;
 import com.github.nexmark.flink.metric.FlinkRestClient;
+import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
 import com.github.nexmark.flink.metric.cpu.CpuMetricReceiver;
 import com.github.nexmark.flink.utils.NexmarkGlobalConfiguration;
@@ -42,6 +44,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static com.github.nexmark.flink.metric.BenchmarkMetric.NUMBER_FORMAT;
+import static com.github.nexmark.flink.metric.BenchmarkMetric.formatDoubleValue;
 
 /**
  * The entry point to run benchmark for nexmark queries.
@@ -94,13 +99,15 @@ public class Benchmark {
 		WorkloadSuite workloadSuite = WorkloadSuite.fromConf(nexmarkConf);
 
 		// start to run queries
-		LinkedHashMap<String, BenchmarkMetric> totalMetrics = new LinkedHashMap<>();
+		LinkedHashMap<String, JobBenchmarkMetric> totalMetrics = new LinkedHashMap<>();
 		for (String queryName : queries) {
 			Workload workload = workloadSuite.getQueryWorkload(queryName);
 			if (workload == null) {
 				throw new IllegalArgumentException(
 					String.format("The workload of query %s is not defined.", queryName));
 			}
+			workload.validateWorkload(monitorDuration);
+
 			MetricReporter reporter = new MetricReporter(
 				flinkRestClient,
 				cpuMetricReceiver,
@@ -114,7 +121,7 @@ public class Benchmark {
 				flinkDist,
 				reporter,
 				flinkRestClient);
-			BenchmarkMetric metric = runner.run();
+			JobBenchmarkMetric metric = runner.run();
 			totalMetrics.put(queryName, metric);
 		}
 
@@ -162,27 +169,75 @@ public class Benchmark {
 		return queryList;
 	}
 
-	public static void printSummary(LinkedHashMap<String, BenchmarkMetric> totalMetrics) {
+	public static void printSummary(LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
 		if (totalMetrics.isEmpty()) {
 			return;
 		}
 		System.err.println("-------------------------------- Nexmark Results --------------------------------");
 		int itemMaxLength = 20;
 		System.err.println();
+		if (totalMetrics.values().iterator().next().getEventsNum() != 0) {
+			printEventNumSummary(itemMaxLength, totalMetrics);
+		} else {
+			printTPSSummary(itemMaxLength, totalMetrics);
+		}
+		System.err.println();
+	}
+
+	private static void printEventNumSummary(
+			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
+		printLine('-', "+", itemMaxLength, "", "", "", "", "");
+		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "");
+
+		long totalEventsNum = 0;
+		double totalCpus = 0;
+		double totalTimeSeconds = 0;
+		double totalCoresMultiplyTimeSeconds = 0;
+		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
+			JobBenchmarkMetric metric = entry.getValue();
+			printLine(' ', "|", itemMaxLength,
+					entry.getKey(),
+					NUMBER_FORMAT.format(metric.getEventsNum()),
+					NUMBER_FORMAT.format(metric.getCpu()),
+					formatDoubleValue(metric.getTimeSeconds()),
+					formatDoubleValue(metric.getCoresMultiplyTimeSeconds()));
+			totalEventsNum += metric.getEventsNum();
+			totalCpus += metric.getCpu();
+			totalTimeSeconds += metric.getTimeSeconds();
+			totalCoresMultiplyTimeSeconds += metric.getCoresMultiplyTimeSeconds();
+		}
+		printLine(' ', "|", itemMaxLength,
+				"Total",
+				NUMBER_FORMAT.format(totalEventsNum),
+				formatDoubleValue(totalCpus),
+				formatDoubleValue(totalTimeSeconds),
+				formatDoubleValue(totalCoresMultiplyTimeSeconds));
+		printLine('-', "+", itemMaxLength, "", "", "", "", "");
+	}
+
+	private static void printTPSSummary(
+			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
 		printLine('-', "+", itemMaxLength, "", "", "", "");
 		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores");
 		printLine('-', "+", itemMaxLength, "", "", "", "");
 
-		for (Map.Entry<String, BenchmarkMetric> entry : totalMetrics.entrySet()) {
-			BenchmarkMetric metric = entry.getValue();
+		long totalTpsPerCore = 0;
+		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
+			JobBenchmarkMetric metric = entry.getValue();
 			printLine(' ', "|", itemMaxLength,
 				entry.getKey(),
 				metric.getPrettyTps(),
 				metric.getPrettyCpu(),
 				metric.getPrettyTpsPerCore());
+			totalTpsPerCore += metric.getTpsPerCore();
 		}
+		printLine(' ', "|", itemMaxLength,
+				"Total",
+				"-",
+				"-",
+				BenchmarkMetric.formatLongValue(totalTpsPerCore));
 		printLine('-', "+", itemMaxLength, "", "", "", "");
-		System.err.println();
 	}
 
 	private static void printLine(

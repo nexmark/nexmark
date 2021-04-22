@@ -101,6 +101,19 @@ public class FlinkRestClient {
 		}
 	}
 
+	public boolean isJobRunning() {
+		String url = String.format("http://%s/jobs", jmEndpoint);
+		String response = executeAsString(url);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			JsonNode jobs = jsonNode.get("jobs");
+			JsonNode job = jobs.get(0);
+			return job.get("status").asText().equals("RUNNING");
+		} catch (Exception e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
+	}
+
 	public String getSourceVertexId(String jobId) {
 		String url = String.format("http://%s/jobs/%s", jmEndpoint, jobId);
 		String response = executeAsString(url);

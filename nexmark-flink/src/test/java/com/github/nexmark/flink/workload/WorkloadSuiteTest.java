@@ -20,11 +20,15 @@ package com.github.nexmark.flink.workload;
 
 import org.apache.flink.configuration.Configuration;
 
+import com.github.nexmark.flink.FlinkNexmarkOptions;
 import com.github.nexmark.flink.utils.NexmarkGlobalConfiguration;
 import com.github.nexmark.flink.utils.NexmarkGlobalConfigurationTest;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.net.URL;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,10 +36,14 @@ import static org.junit.Assert.assertEquals;
 
 public class WorkloadSuiteTest {
 
+	@Rule
+	public ExpectedException exception = ExpectedException.none();
+
 	@Test
 	public void testCustomizedConf() {
 		Configuration conf = new Configuration();
 		conf.setString("nexmark.workload.suite.8m.tps", "8000000");
+		conf.setString("nexmark.workload.suite.8m.events.num", "80000000");
 		conf.setString("nexmark.workload.suite.8m.queries", "q0,q1,q2,q10,q12,q13,q14");
 		conf.setString("nexmark.workload.suite.2m-no-bid.tps", "2000000");
 		conf.setString("nexmark.workload.suite.2m-no-bid.percentage", "bid:0, auction:9, person:1");
@@ -46,10 +54,10 @@ public class WorkloadSuiteTest {
 		conf.setString("nexmark.workload.suite.1m.queries", "q4,q7,q9,q11");
 		WorkloadSuite suite = WorkloadSuite.fromConf(conf);
 
-		Workload load8m = new Workload(8000000, 1, 3, 46);
-		Workload load2mNoBid = new Workload(2000000, 1, 9, 0);
-		Workload load2m = new Workload(2000000, 1, 3, 46);
-		Workload load1m = new Workload(1000000, 1, 3, 46);
+		Workload load8m = new Workload(8000000, 80000000, 1, 3, 46);
+		Workload load2mNoBid = new Workload(2000000, 0, 1, 9, 0);
+		Workload load2m = new Workload(2000000, 0, 1, 3, 46);
+		Workload load1m = new Workload(1000000, 0, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
 		query2Workload.put("q0", load8m);
@@ -83,7 +91,7 @@ public class WorkloadSuiteTest {
 		Configuration conf = NexmarkGlobalConfiguration.loadConfiguration(confDir.getPath());
 		WorkloadSuite suite = WorkloadSuite.fromConf(conf);
 
-		Workload load = new Workload(10000000, 1, 3, 46);
+		Workload load = new Workload(10000000, 100000000, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
 		query2Workload.put("q0", load);
@@ -105,5 +113,41 @@ public class WorkloadSuiteTest {
 		WorkloadSuite expected = new WorkloadSuite(query2Workload);
 
 		assertEquals(expected, suite);
+	}
+
+	@Test
+	public void testTPSValidation() {
+		exception.expectMessage("You should configure 'nexmark.metric.monitor.duration'" +
+				" in the TPS mode. Otherwise, the job will never end.");
+		// TPS mode
+		long eventsNum = 0L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(FlinkNexmarkOptions.METRIC_MONITOR_DURATION.defaultValue());
+	}
+
+	@Test
+	public void testEventsNumValidation() {
+		exception.expectMessage("The configuration of 'nexmark.metric.monitor.duration'" +
+				" is not supported in the events number mode.");
+		// EventsNum mode
+		long eventsNum = 100L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(Duration.ofMillis(1000));
+	}
+
+	@Test
+	public void testTPSMode() {
+		// TPS mode
+		long eventsNum = 0L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(Duration.ofMillis(1000));
+	}
+
+	@Test
+	public void testEventsNumMode() {
+		// EventsNum mode
+		long eventsNum = 100L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(FlinkNexmarkOptions.METRIC_MONITOR_DURATION.defaultValue());
 	}
 }
