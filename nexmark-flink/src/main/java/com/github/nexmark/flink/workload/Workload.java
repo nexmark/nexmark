@@ -18,8 +18,12 @@
 
 package com.github.nexmark.flink.workload;
 
+import org.apache.flink.util.Preconditions;
+
+import com.github.nexmark.flink.FlinkNexmarkOptions;
 import com.github.nexmark.flink.metric.BenchmarkMetric;
 
+import java.time.Duration;
 import java.util.Objects;
 
 public class Workload {
@@ -56,6 +60,25 @@ public class Workload {
 
 	public int getBidProportion() {
 		return bidProportion;
+	}
+
+	public void validateWorkload(Duration monitorDuration) {
+		boolean unboundedMonitor = monitorDuration.toMillis() == Long.MAX_VALUE;
+		if (getEventsNum() == 0) {
+			// TPS mode
+			Preconditions.checkArgument(
+					!unboundedMonitor,
+					"You should configure '%s' in the TPS mode." +
+							" Otherwise, the job will never end.",
+					FlinkNexmarkOptions.METRIC_MONITOR_DURATION.key());
+		} else {
+			// EventsNum mode
+			Preconditions.checkArgument(
+					unboundedMonitor,
+					"The configuration of '%s' is not supported" +
+							" in the events number mode.",
+					FlinkNexmarkOptions.METRIC_MONITOR_DURATION.key());
+		}
 	}
 
 	@Override

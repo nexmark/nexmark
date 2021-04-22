@@ -106,23 +106,7 @@ public class Benchmark {
 				throw new IllegalArgumentException(
 					String.format("The workload of query %s is not defined.", queryName));
 			}
-			boolean unboundedMonitor = monitorDuration.toMillis() == Long.MAX_VALUE;
-
-			if (workload.getEventsNum() == 0) {
-				// TPS mode
-				Preconditions.checkArgument(
-						!unboundedMonitor,
-						"You should configure '%s' in the TPS mode." +
-								" Otherwise, the job will never end.",
-						FlinkNexmarkOptions.METRIC_MONITOR_DURATION.key());
-			} else {
-				// EventsNum mode
-				Preconditions.checkArgument(
-						unboundedMonitor,
-						"The configuration of '%s' is not supported" +
-								" in the events number mode.",
-						FlinkNexmarkOptions.METRIC_MONITOR_DURATION.key());
-			}
+			workload.validateWorkload(monitorDuration);
 
 			MetricReporter reporter = new MetricReporter(
 				flinkRestClient,

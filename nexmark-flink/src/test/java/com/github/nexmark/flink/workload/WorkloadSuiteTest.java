@@ -20,17 +20,24 @@ package com.github.nexmark.flink.workload;
 
 import org.apache.flink.configuration.Configuration;
 
+import com.github.nexmark.flink.FlinkNexmarkOptions;
 import com.github.nexmark.flink.utils.NexmarkGlobalConfiguration;
 import com.github.nexmark.flink.utils.NexmarkGlobalConfigurationTest;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.net.URL;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
 public class WorkloadSuiteTest {
+
+	@Rule
+	public ExpectedException exception = ExpectedException.none();
 
 	@Test
 	public void testCustomizedConf() {
@@ -106,5 +113,41 @@ public class WorkloadSuiteTest {
 		WorkloadSuite expected = new WorkloadSuite(query2Workload);
 
 		assertEquals(expected, suite);
+	}
+
+	@Test
+	public void testTPSValidation() {
+		exception.expectMessage("You should configure 'nexmark.metric.monitor.duration'" +
+				" in the TPS mode. Otherwise, the job will never end.");
+		// TPS mode
+		long eventsNum = 0L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(FlinkNexmarkOptions.METRIC_MONITOR_DURATION.defaultValue());
+	}
+
+	@Test
+	public void testEventsNumValidation() {
+		exception.expectMessage("The configuration of 'nexmark.metric.monitor.duration'" +
+				" is not supported in the events number mode.");
+		// EventsNum mode
+		long eventsNum = 100L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(Duration.ofMillis(1000));
+	}
+
+	@Test
+	public void testTPSMode() {
+		// TPS mode
+		long eventsNum = 0L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(Duration.ofMillis(1000));
+	}
+
+	@Test
+	public void testEventsNumMode() {
+		// EventsNum mode
+		long eventsNum = 100L;
+		new Workload(0L, eventsNum,0, 0, 0)
+				.validateWorkload(FlinkNexmarkOptions.METRIC_MONITOR_DURATION.defaultValue());
 	}
 }
