@@ -41,7 +41,7 @@ These are multiple queries over a three entities model representing on online au
 
 For evaluating the performance, there are two performance measurement terms used in Nexmark that are **cores** and **time**.
 
-Cores is the CPU usage used by the stream processing system. Usually CPU allows preemption, not like memory can be limited. Therefore, how the stream processing system effectively use CPU resources, they are important aspect for streaming performance benchmark.
+Cores is the CPU usage used by the stream processing system. Usually CPU allows preemption, not like memory can be limited. Therefore, how the stream processing system effectively use CPU resources, how much throughput is contributed per core, they are important aspect for streaming performance benchmark.
 For Flink, we deploy a CPU usage collector on every worker node and send the usage metric to the benchmark runner for summarizing. We don't use the `Status.JVM.CPU.Load` metric provided by Flink, because it is not accurate.
 
 Time is the cost time for specified number of events executed by the stream processing system. With Cores * Time, we can know how many resources the stream processing system uses to process specified number of events.
@@ -139,24 +139,26 @@ Source total events number is 100 million. Source generates 10M records per seco
 ### Benchmark Results
 
 ```
-|Nexmark Query | Events Num     | Cores    | Time(s)   | Cores * Time(s)   |
-|--------------|----------------|----------|-----------|-------------------|
-|q0            |100,000,000     |8.4       |19.257     |161.708            |
-|q1            |100,000,000     |8.44      |19.772     |166.800            |
-|q2            |100,000,000     |8.43      |18.317     |154.410            |
-|q3            |100,000,000     |10.02     |19.514     |195.501            |
-|q4            |100,000,000     |12.12     |161.065    |1951.950           |
-|q5            |100,000,000     |9.77      |388.114    |3791.957           |
-|q7            |100,000,000     |13.46     |552.031    |7429.270           |
-|q8            |100,000,000     |13.8      |24.409     |336.958            |
-|q9            |100,000,000     |17.77     |256.490    |4558.476           |
-|q10           |100,000,000     |8.12      |147.304    |1196.574           |
-|q11           |100,000,000     |9.22      |239.398    |2208.126           |
-|q12           |100,000,000     |10        |97.953     |979.953            |
-|q13           |100,000,000     |8.33      |22.362     |186.309            |
-|q14           |100,000,000     |8.31      |20.847     |173.243            |
-|q15           |100,000,000     |9.09      |43.542     |395.777            |
-|Total         |1,500,000,000   |155.289   |2030.375   |23887.011          |
++--------------+------ ---------+----------+-----------+-------------------+-------------------+
+|Nexmark Query | Events Num     | Cores    | Time(s)   | Cores * Time(s)   | Throughput/Cores  |
+|--------------|----------------|----------|-----------|-------------------|-------------------|
+|q0            |100,000,000     |8.34      |48.663     |405.793            |246 K              |
+|q1            |100,000,000     |8.4       |49.614     |416.639            |240 K              |
+|q2            |100,000,000     |8.24      |45.256     |372.985            |268 K              |
+|q3            |100,000,000     |9.07      |62.640     |568.090            |176 K              |
+|q4            |100,000,000     |12.28     |218.609    |2683.576           |37.2 K             |
+|q5            |100,000,000     |10.73     |368.410    |3954.738           |25.2 K             |
+|q7            |100,000,000     |13.91     |564.737    |7856.976           |12.7 K             |
+|q8            |100,000,000     |9.93      |58.513     |581.232            |172 K              |
+|q9            |100,000,000     |14.01     |359.642    |5038.584           |19.8 K             |
+|q10           |100,000,000     |8.22      |200.426    |1647.809           |60.6 K             |
+|q11           |100,000,000     |10.08     |243.547    |2455.134           |40.7 K             |
+|q12           |100,000,000     |12.8      |96.226     |1231.649           |81.1 K             |
+|q13           |100,000,000     |8.18      |83.391     |682.280            |146 K              |
+|q14           |100,000,000     |8.19      |64.923     |532.002            |187 K              |
+|q15           |100,000,000     |8.57      |141.839    |1215.683           |82.2 K             |
+|Total         |1,500,000,000   |150.962   |2606.436   |29643.170          |1794 K             |
++--------------+------ ---------+----------+-----------+-------------------+-------------------+
 ```
 
 ## Roadmap
