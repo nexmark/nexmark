@@ -39,13 +39,12 @@ These are multiple queries over a three entities model representing on online au
 
 ### Metrics
 
-For evaluating the performance, there are two performance measurement terms used in Nexmark that are **throughput** and **cores**.
+For evaluating the performance, there are two performance measurement terms used in Nexmark that are **cores** and **time**.
 
-Throughput is the number of events executed by the stream processing system per seconds. As the three entities (Person, Auction, Bid) are generated in a single generator, we measures the total throughput of all events. So that we have a consistent measurement for every queries.
-For Flink, we collect the `<source_operator_name>.numRecordsOutPerSecond` metric via Flink [Monitoring REST API](https://ci.apache.org/projects/flink/flink-docs-release-1.11/monitoring/rest_api.html).
-
-Cores is the CPU usage used by the stream processing system. Usually CPU allows preemption, not like memory can be limited. Therefore, how the stream processing system effectively use CPU resources, how much throughput is contributed per core, they are important aspect for streaming performance benchmark.
+Cores is the CPU usage used by the stream processing system. Usually CPU allows preemption, not like memory can be limited. Therefore, how the stream processing system effectively use CPU resources, they are important aspect for streaming performance benchmark.
 For Flink, we deploy a CPU usage collector on every worker node and send the usage metric to the benchmark runner for summarizing. We don't use the `Status.JVM.CPU.Load` metric provided by Flink, because it is not accurate.
+
+Time is the cost time for specified number of events executed by the stream processing system. With Cores * Time, we can know how many resources the stream processing system uses to process specified number of events.
 
 ## Nexmark Benchmark Guideline
 
@@ -102,7 +101,7 @@ Before start to run the benchmark, you should build the Nexmark benchmark first 
 
 ### Run Nexmark
 
-You can run the Nexmark benchmark by running `nexmark/bin/run_query.sh all` on the master node. It will run all the queries one by one, and collect benchmark metrics automatically. It will take hours (1h30m) to finish the benchmark by default (6 min for each query). At last, it will print the benchmark summary result (TPS and Cores for each query) on the console.
+You can run the Nexmark benchmark by running `nexmark/bin/run_query.sh all` on the master node. It will run all the queries one by one, and collect benchmark metrics automatically. It will take 50 minutes to finish the benchmark by default. At last, it will print the benchmark summary result (Cores * Time(s) for each query) on the console.
 
 You can also run specific queries by running `nexmark/bin/run_query.sh q1,q2`.
 
@@ -112,10 +111,10 @@ You can also tune the workload of the queries by editing `nexmark/conf/nexmark.y
 
 ### Machines
 
-- 3 worker node (ecs.i2g.2xlarge instances on Aliyun)
-- Each machine has 1 Xeon 2.5 GHz CPU (8 vCores) and 32 GB RAM
+Minimum requirements:
+- 3 worker node 
+- Each machine has 8 cores and 32 GB RAM
 - 800 GB SSD local disk
-- 2 Gbps between compute nodes
 
 ### Flink Configuration
 
@@ -124,42 +123,40 @@ Use the default configuration file `flink-conf.yaml` and `sql-client-defaults.ya
 Some notable configurations including:
 
 - 8 TaskManagers, each has only 1 slot
-- 4GB for each TaskManager and JobManager
+- 8 GB for each TaskManager and JobManager
 - Job parallelism: 8
 - Checkpoint enabled with exactly once mode and 3 minutes interval
 - Use RocksDB state backend with incremental checkpoint enabled
 - MiniBatch optimization enabled with 2 seconds interval and 5000 rows
 - Splitting distinct aggregation optimization is enabled
 
-Flink version: manually build for release-1.11 branch on commit b9ca9bb.
+Flink version: 1.13.
 
 ### Workloads
 
-Source generates 10M records per seconds. The percentage of 3 stream is Bid: 92%, Auction: 6%, Person: 2%.
-Each query will warm up for 3 minutes and then collect metrics for 3 minutes.
+Source total events number is 100 million. Source generates 10M records per seconds. The percentage of 3 stream is Bid: 92%, Auction: 6%, Person: 2%.
 
 ### Benchmark Results
 
 ```
-+-------------------+-------------------+-------------------+-------------------+
-| Nexmark Query     | Throughput (r/s)  | Cores             | Throughput/Cores  |
-+-------------------+-------------------+-------------------+-------------------+
-|q0                 |1.9 M              |8.17               |235 K              |
-|q1                 |1.8 M              |8.17               |228 K              |
-|q2                 |2.1 M              |8.16               |258 K              |
-|q3                 |1.9 M              |9.66               |198 K              |
-|q4                 |305 K              |11.55              |26 K               |
-|q5                 |311 K              |11.71              |26 K               |
-|q7                 |153 K              |12.14              |12 K               |
-|q8                 |1.8 M              |13.65              |135 K              |
-|q9                 |170 K              |11.86              |14 K               |
-|q10                |633 K              |8.23               |76 K               |
-|q11                |428 K              |10.5               |40 K               |
-|q12                |937 K              |12.35              |75 K               |
-|q13                |1.4 M              |8.26               |179 K              |
-|q14                |1.8 M              |8.28               |228 K              |
-|q15                |729 K              |9.06               |80 K               |
-+-------------------+-------------------+-------------------+-------------------+
+|Nexmark Query | Events Num     | Cores    | Time(s)   | Cores * Time(s)   |
+|--------------|----------------|----------|-----------|-------------------|
+|q0            |100,000,000     |8.4       |19.257     |161.708            |
+|q1            |100,000,000     |8.44      |19.772     |166.800            |
+|q2            |100,000,000     |8.43      |18.317     |154.410            |
+|q3            |100,000,000     |10.02     |19.514     |195.501            |
+|q4            |100,000,000     |12.12     |161.065    |1951.950           |
+|q5            |100,000,000     |9.77      |388.114    |3791.957           |
+|q7            |100,000,000     |13.46     |552.031    |7429.270           |
+|q8            |100,000,000     |13.8      |24.409     |336.958            |
+|q9            |100,000,000     |17.77     |256.490    |4558.476           |
+|q10           |100,000,000     |8.12      |147.304    |1196.574           |
+|q11           |100,000,000     |9.22      |239.398    |2208.126           |
+|q12           |100,000,000     |10        |97.953     |979.953            |
+|q13           |100,000,000     |8.33      |22.362     |186.309            |
+|q14           |100,000,000     |8.31      |20.847     |173.243            |
+|q15           |100,000,000     |9.09      |43.542     |395.777            |
+|Total         |1,500,000,000   |155.289   |2030.375   |23887.011          |
 ```
 
 ## Roadmap
