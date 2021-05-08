@@ -48,6 +48,7 @@ import java.util.Set;
 import static com.github.nexmark.flink.metric.BenchmarkMetric.NUMBER_FORMAT;
 import static com.github.nexmark.flink.metric.BenchmarkMetric.formatDoubleValue;
 import static com.github.nexmark.flink.metric.BenchmarkMetric.formatLongValue;
+import static com.github.nexmark.flink.metric.BenchmarkMetric.formatLongValuePerSecond;
 
 /**
  * The entry point to run benchmark for nexmark queries.
@@ -205,7 +206,7 @@ public class Benchmark {
 					NUMBER_FORMAT.format(metric.getCpu()),
 					formatDoubleValue(metric.getTimeSeconds()),
 					formatDoubleValue(metric.getCoresMultiplyTimeSeconds()),
-					formatLongValue((long) throughputPerCore));
+					formatLongValuePerSecond((long) throughputPerCore));
 			totalEventsNum += metric.getEventsNum();
 			totalCpus += metric.getCpu();
 			totalTimeSeconds += metric.getTimeSeconds();
@@ -218,7 +219,7 @@ public class Benchmark {
 				formatDoubleValue(totalCpus),
 				formatDoubleValue(totalTimeSeconds),
 				formatDoubleValue(totalCoresMultiplyTimeSeconds),
-				formatLongValue((long) totalThroughputPerCore));
+				formatLongValuePerSecond((long) totalThroughputPerCore));
 		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
 	}
 
