@@ -47,6 +47,8 @@ import java.util.Set;
 
 import static com.github.nexmark.flink.metric.BenchmarkMetric.NUMBER_FORMAT;
 import static com.github.nexmark.flink.metric.BenchmarkMetric.formatDoubleValue;
+import static com.github.nexmark.flink.metric.BenchmarkMetric.formatLongValue;
+import static com.github.nexmark.flink.metric.BenchmarkMetric.formatLongValuePerSecond;
 
 /**
  * The entry point to run benchmark for nexmark queries.
@@ -186,34 +188,39 @@ public class Benchmark {
 
 	private static void printEventNumSummary(
 			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
-		printLine('-', "+", itemMaxLength, "", "", "", "", "");
-		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)");
-		printLine('-', "+", itemMaxLength, "", "", "", "", "");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
+		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)", " Throughput/Cores");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
 
 		long totalEventsNum = 0;
 		double totalCpus = 0;
 		double totalTimeSeconds = 0;
 		double totalCoresMultiplyTimeSeconds = 0;
+		double totalThroughputPerCore = 0;
 		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
 			JobBenchmarkMetric metric = entry.getValue();
+			double throughputPerCore = metric.getEventsNum() / metric.getCoresMultiplyTimeSeconds();
 			printLine(' ', "|", itemMaxLength,
 					entry.getKey(),
 					NUMBER_FORMAT.format(metric.getEventsNum()),
 					NUMBER_FORMAT.format(metric.getCpu()),
 					formatDoubleValue(metric.getTimeSeconds()),
-					formatDoubleValue(metric.getCoresMultiplyTimeSeconds()));
+					formatDoubleValue(metric.getCoresMultiplyTimeSeconds()),
+					formatLongValuePerSecond((long) throughputPerCore));
 			totalEventsNum += metric.getEventsNum();
 			totalCpus += metric.getCpu();
 			totalTimeSeconds += metric.getTimeSeconds();
 			totalCoresMultiplyTimeSeconds += metric.getCoresMultiplyTimeSeconds();
+			totalThroughputPerCore += throughputPerCore;
 		}
 		printLine(' ', "|", itemMaxLength,
 				"Total",
 				NUMBER_FORMAT.format(totalEventsNum),
 				formatDoubleValue(totalCpus),
 				formatDoubleValue(totalTimeSeconds),
-				formatDoubleValue(totalCoresMultiplyTimeSeconds));
-		printLine('-', "+", itemMaxLength, "", "", "", "", "");
+				formatDoubleValue(totalCoresMultiplyTimeSeconds),
+				formatLongValuePerSecond((long) totalThroughputPerCore));
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
 	}
 
 	private static void printTPSSummary(
@@ -236,7 +243,7 @@ public class Benchmark {
 				"Total",
 				"-",
 				"-",
-				BenchmarkMetric.formatLongValue(totalTpsPerCore));
+				formatLongValue(totalTpsPerCore));
 		printLine('-', "+", itemMaxLength, "", "", "", "");
 	}
 
