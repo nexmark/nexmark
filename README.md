@@ -97,7 +97,12 @@ Before start to run the benchmark, you should build the Nexmark benchmark first 
 - Step6: Copy `flink` and `nexmark` to your worker nodes using `scp`.
 - Step7: Start Flink Cluster by running `flink/bin/start-cluster.sh` on the master node.
 - Step8: Setup the benchmark cluster by running `nexmark/bin/setup_cluster.sh` on the master node.
-
+- (If you want to use kafka source instead of datagen source) Step9: Prepare Kafka
+  - Start your kafka cluster. (recommend to use SSD)
+  - Create kafka topic: `bin/kafka-topics.sh --create --topic nexmark --bootstrap-server localhost:9092 --partitions 8`.
+  - Edit `nexmark/conf/nexmark.yaml`, set `kafka.bootstrap.servers`.
+  - Prepare source data: `nexmark/bin/run_query.sh insert_kafka`.
+  - NOTE: Kafka source is endless, only supports tps mode (unlimited events.num) now.
 
 ### Run Nexmark
 

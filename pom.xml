@@ -25,7 +25,7 @@ under the License.
     <groupId>com.github.nexmark</groupId>
     <artifactId>nexmark</artifactId>
     <packaging>pom</packaging>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.2-SNAPSHOT</version>
 
     <properties>
         <flink.version>1.13.0</flink.version>

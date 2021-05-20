@@ -23,6 +23,8 @@ import org.apache.flink.util.Preconditions;
 import com.github.nexmark.flink.FlinkNexmarkOptions;
 import com.github.nexmark.flink.metric.BenchmarkMetric;
 
+import javax.annotation.Nullable;
+
 import java.time.Duration;
 import java.util.Objects;
 
@@ -33,13 +35,25 @@ public class Workload {
 	private final int personProportion;
 	private final int auctionProportion;
 	private final int bidProportion;
+	private final @Nullable String kafkaServers;
 
 	public Workload(long tps, long eventsNum, int personProportion, int auctionProportion, int bidProportion) {
+		this(tps, eventsNum, personProportion, auctionProportion, bidProportion, null);
+	}
+
+	public Workload(
+			long tps,
+			long eventsNum,
+			int personProportion,
+			int auctionProportion,
+			int bidProportion,
+			@Nullable String kafkaServers) {
 		this.tps = tps;
 		this.eventsNum = eventsNum;
 		this.personProportion = personProportion;
 		this.auctionProportion = auctionProportion;
 		this.bidProportion = bidProportion;
+		this.kafkaServers = kafkaServers;
 	}
 
 	public long getTps() {
@@ -60,6 +74,10 @@ public class Workload {
 
 	public int getBidProportion() {
 		return bidProportion;
+	}
+
+	public String getKafkaServers() {
+		return kafkaServers;
 	}
 
 	public void validateWorkload(Duration monitorDuration) {
@@ -90,22 +108,24 @@ public class Workload {
 			eventsNum == workload.eventsNum &&
 			personProportion == workload.personProportion &&
 			auctionProportion == workload.auctionProportion &&
-			bidProportion == workload.bidProportion;
+			bidProportion == workload.bidProportion &&
+			Objects.equals(kafkaServers, workload.kafkaServers);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(tps, eventsNum, personProportion, auctionProportion, bidProportion);
+		return Objects.hash(tps, eventsNum, personProportion, auctionProportion, bidProportion, kafkaServers);
 	}
 
 	public String getSummaryString() {
 		return String.format(
-			"[tps=%s, eventsNum=%s, percentage=bid:%s,auction:%s,person:%s]",
+			"[tps=%s, eventsNum=%s, percentage=bid:%s,auction:%s,person:%s,kafkaServers:%s]",
 			BenchmarkMetric.formatLongValue(tps),
 			BenchmarkMetric.formatLongValue(eventsNum),
 			bidProportion,
 			auctionProportion,
-			personProportion);
+			personProportion,
+			kafkaServers);
 	}
 
 	@Override
@@ -116,6 +136,7 @@ public class Workload {
 			", personProportion=" + personProportion +
 			", auctionProportion=" + auctionProportion +
 			", bidProportion=" + bidProportion +
+			", kafkaServers=" + kafkaServers +
 			'}';
 	}
 }

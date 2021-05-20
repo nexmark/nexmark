@@ -48,8 +48,22 @@ nexmark.workload.suite.100m.queries: "q0,q1,q2,q3,q4,q5,q7,q8,q9,q10,q11,q12,q13
 # nexmark.workload.suite.10m.queries: "q0,q1,q2,q3,q4,q5,q7,q8,q9,q10,q11,q12,q13,q14,q15"
 
 #==============================================================================
+# Workload for data generation
+#==============================================================================
+
+nexmark.workload.suite.datagen.events.num: 500000000
+nexmark.workload.suite.datagen.tps: 10000000
+nexmark.workload.suite.datagen.queries: "insert_kafka"
+
+#==============================================================================
 # Flink REST
 #==============================================================================
 
 flink.rest.address: localhost
 flink.rest.port: 8081
+
+#==============================================================================
+# Kafka config
+#==============================================================================
+
+# kafka.bootstrap.servers: ***:9092

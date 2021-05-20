@@ -99,16 +99,17 @@ public class QueryRunner {
 		varsMap.put("PERSON_PROPORTION", String.valueOf(workload.getPersonProportion()));
 		varsMap.put("AUCTION_PROPORTION", String.valueOf(workload.getAuctionProportion()));
 		varsMap.put("BID_PROPORTION", String.valueOf(workload.getBidProportion()));
+		varsMap.put("NEXMARK_TABLE", workload.getKafkaServers() == null ? "datagen" : "kafka");
+		varsMap.put("BOOTSTRAP_SERVERS", workload.getKafkaServers() == null ? "" : workload.getKafkaServers());
 		return varsMap;
 	}
 
-
 	private List<String> initializeAllSqlLines(Map<String, String> vars) throws IOException {
-		File ddlFile = new File(queryLocation.toFile(), "ddl.sql");
-		File queryFile = new File(queryLocation.toFile(), queryName + ".sql");
 		List<String> allLines = new ArrayList<>();
-		allLines.addAll(initializeSqlFileLines(vars, ddlFile));
-		allLines.addAll(initializeSqlFileLines(vars, queryFile));
+		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), "ddl_gen.sql")));
+		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), "ddl_kafka.sql")));
+		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), "ddl_views.sql")));
+		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), queryName + ".sql")));
 		return allLines;
 	}
 
