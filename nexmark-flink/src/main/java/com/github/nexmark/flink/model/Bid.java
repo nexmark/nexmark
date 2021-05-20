@@ -34,6 +34,12 @@ public class Bid implements Serializable {
 	/** Price of bid, in cents. */
 	public long price;
 
+	/** The channel introduced this bidding. */
+	public String channel;
+
+	/** The url of this bid. */
+	public String url;
+
 	/**
 	 * Instant at which bid was made (ms since epoch). NOTE: This may be earlier than the system's
 	 * event time.
@@ -43,10 +49,12 @@ public class Bid implements Serializable {
 	/** Additional arbitrary payload for performance testing. */
 	public String extra;
 
-	public Bid(long auction, long bidder, long price, Instant dateTime, String extra) {
+	public Bid(long auction, long bidder, long price, String channel, String url, Instant dateTime, String extra) {
 		this.auction = auction;
 		this.bidder = bidder;
 		this.price = price;
+		this.channel = channel;
+		this.url = url;
 		this.dateTime = dateTime;
 		this.extra = extra;
 	}
@@ -64,13 +72,15 @@ public class Bid implements Serializable {
 		return Objects.equals(auction, other.auction)
 			&& Objects.equals(bidder, other.bidder)
 			&& Objects.equals(price, other.price)
+			&& Objects.equals(channel, other.channel)
+			&& Objects.equals(url, other.url)
 			&& Objects.equals(dateTime, other.dateTime)
 			&& Objects.equals(extra, other.extra);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(auction, bidder, price, dateTime, extra);
+		return Objects.hash(auction, bidder, price, channel, url, dateTime, extra);
 	}
 
 	@Override
@@ -79,6 +89,8 @@ public class Bid implements Serializable {
 				"auction=" + auction +
 				", bidder=" + bidder +
 				", price=" + price +
+				", channel=" + channel +
+				", url=" + url +
 				", dateTime=" + dateTime +
 				", extra='" + extra + '\'' +
 				'}';

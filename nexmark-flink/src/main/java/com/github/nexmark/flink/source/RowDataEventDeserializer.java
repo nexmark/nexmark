@@ -82,12 +82,14 @@ public class RowDataEventDeserializer implements EventDeserializer<RowData> {
 	}
 
 	private RowData convertBid(Bid bid) {
-		GenericRowData rowData = new GenericRowData(5);
+		GenericRowData rowData = new GenericRowData(7);
 		rowData.setField(0, bid.auction);
 		rowData.setField(1, bid.bidder);
 		rowData.setField(2, bid.price);
-		rowData.setField(3, TimestampData.fromInstant(bid.dateTime));
-		rowData.setField(4, StringData.fromString(bid.extra));
+		rowData.setField(3, StringData.fromString(bid.channel));
+		rowData.setField(4, StringData.fromString(bid.url));
+		rowData.setField(5, TimestampData.fromInstant(bid.dateTime));
+		rowData.setField(6, StringData.fromString(bid.extra));
 		return rowData;
 	}
 

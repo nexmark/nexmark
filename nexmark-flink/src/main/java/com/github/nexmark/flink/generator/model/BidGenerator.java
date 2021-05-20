@@ -23,6 +23,8 @@ import com.github.nexmark.flink.model.Bid;
 import java.time.Instant;
 import java.util.Random;
 
+import static com.github.nexmark.flink.generator.model.StringsGenerator.nextString;
+
 /** Generates bids. */
 public class BidGenerator {
 
@@ -33,6 +35,12 @@ public class BidGenerator {
   private static final int HOT_AUCTION_RATIO = 100;
 
   private static final int HOT_BIDDER_RATIO = 100;
+
+  private static final int HOT_CHANNELS_RATIO = 2;
+
+  private static final int CHANNELS_NUMBER = 10_000;
+
+  private static final String[] HOT_CHANNELS = new String[] {"Google", "Facebook", "Baidu", "Apple"};
 
   /** Generate and return a random bid with next available id. */
   public static Bid nextBid(long eventId, Random random, long timestamp, GeneratorConfig config) {
@@ -59,8 +67,25 @@ public class BidGenerator {
     bidder += GeneratorConfig.FIRST_PERSON_ID;
 
     long price = PriceGenerator.nextPrice(random);
+
+    String channel;
+    String url = String.format("https://www.nexmark.com/%s/%s/%s/item.htm?auction=%s",
+            nextString(random, 5).replace(" ", "_"),
+            nextString(random, 5).replace(" ", "_"),
+            nextString(random, 5).replace(" ", "_"),
+            auction);
+    if (random.nextInt(HOT_CHANNELS_RATIO) > 0) {
+      channel = HOT_CHANNELS[random.nextInt(HOT_CHANNELS.length)];
+    } else {
+      channel = "channel-" + random.nextInt(CHANNELS_NUMBER);
+      if (random.nextInt(10) > 0) {
+        url = url + "&channel_id=" + Math.abs(channel.hashCode());
+      }
+    }
+    bidder += GeneratorConfig.FIRST_PERSON_ID;
+
     int currentSize = 8 + 8 + 8 + 8;
     String extra = StringsGenerator.nextExtra(random, currentSize, config.getAvgBidByteSize());
-    return new Bid(auction, bidder, price, Instant.ofEpochMilli(timestamp), extra);
+    return new Bid(auction, bidder, price, channel, url, Instant.ofEpochMilli(timestamp), extra);
   }
 }
