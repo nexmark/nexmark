@@ -18,6 +18,7 @@
 
 package com.github.nexmark.flink.metric;
 
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -105,9 +106,8 @@ public class BenchmarkMetric {
 		Long divideBy = e.getKey();
 		String suffix = e.getValue();
 
-		long truncated = value / (divideBy / 10); //the number part of the output times 10
-		boolean hasDecimal = truncated < 1000 && truncated % 10 != 0;
-		return hasDecimal ? (truncated / 10d) + " " + suffix : (truncated / 10) + " " + suffix;
+		DecimalFormat format = new DecimalFormat("0.##");
+		return format.format(value / (double) divideBy) + " " + suffix;
 	}
 
 	public static String formatDoubleValue(double value) {
