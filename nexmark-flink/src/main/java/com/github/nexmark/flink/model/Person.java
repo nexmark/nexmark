@@ -18,11 +18,6 @@
 
 package com.github.nexmark.flink.model;
 
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-
-import com.github.nexmark.flink.utils.NexmarkUtils;
-
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
@@ -31,24 +26,23 @@ import java.util.Objects;
 public class Person implements Serializable {
 
 	/** Id of person. */
-	@JsonProperty
 	public long id; // primary key
 
 	/** Extra person properties. */
-	@JsonProperty public String name;
+	public String name;
 
-	@JsonProperty public String emailAddress;
+	public String emailAddress;
 
-	@JsonProperty public String creditCard;
+	public String creditCard;
 
-	@JsonProperty public String city;
+	public String city;
 
-	@JsonProperty public String state;
+	public String state;
 
-	@JsonProperty public Instant dateTime;
+	public Instant dateTime;
 
 	/** Additional arbitrary payload for performance testing. */
-	@JsonProperty public String extra;
+	public String extra;
 
 	public Person(
 			long id,
@@ -71,11 +65,16 @@ public class Person implements Serializable {
 
 	@Override
 	public String toString() {
-		try {
-			return NexmarkUtils.MAPPER.writeValueAsString(this);
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
-		}
+		return "Person{" +
+				"id=" + id +
+				", name='" + name + '\'' +
+				", emailAddress='" + emailAddress + '\'' +
+				", creditCard='" + creditCard + '\'' +
+				", city='" + city + '\'' +
+				", state='" + state + '\'' +
+				", dateTime=" + dateTime +
+				", extra='" + extra + '\'' +
+				'}';
 	}
 
 	@Override

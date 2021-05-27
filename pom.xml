@@ -28,7 +28,7 @@ under the License.
     <version>0.1-SNAPSHOT</version>
 
     <properties>
-        <flink.version>1.13-SNAPSHOT</flink.version>
+        <flink.version>1.13.0</flink.version>
         <slf4j.version>1.7.15</slf4j.version>
         <log4j.version>1.2.17</log4j.version>
         <java.version>1.8</java.version>

@@ -18,11 +18,6 @@
 
 package com.github.nexmark.flink.model;
 
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-
-import com.github.nexmark.flink.utils.NexmarkUtils;
-
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
@@ -31,22 +26,22 @@ import java.util.Objects;
 public class Bid implements Serializable {
 
 	/** Id of auction this bid is for. */
-	@JsonProperty public long auction; // foreign key: Auction.id
+	public long auction; // foreign key: Auction.id
 
 	/** Id of person bidding in auction. */
-	@JsonProperty public long bidder; // foreign key: Person.id
+	public long bidder; // foreign key: Person.id
 
 	/** Price of bid, in cents. */
-	@JsonProperty public long price;
+	public long price;
 
 	/**
 	 * Instant at which bid was made (ms since epoch). NOTE: This may be earlier than the system's
 	 * event time.
 	 */
-	@JsonProperty public Instant dateTime;
+	public Instant dateTime;
 
 	/** Additional arbitrary payload for performance testing. */
-	@JsonProperty public String extra;
+	public String extra;
 
 	public Bid(long auction, long bidder, long price, Instant dateTime, String extra) {
 		this.auction = auction;
@@ -80,10 +75,12 @@ public class Bid implements Serializable {
 
 	@Override
 	public String toString() {
-		try {
-			return NexmarkUtils.MAPPER.writeValueAsString(this);
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
-		}
+		return "Bid{" +
+				"auction=" + auction +
+				", bidder=" + bidder +
+				", price=" + price +
+				", dateTime=" + dateTime +
+				", extra='" + extra + '\'' +
+				'}';
 	}
 }

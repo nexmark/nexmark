@@ -19,10 +19,6 @@
 package com.github.nexmark.flink.model;
 
 import org.apache.flink.shaded.guava18.com.google.common.base.Objects;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-
-import com.github.nexmark.flink.utils.NexmarkUtils;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -31,32 +27,32 @@ import java.time.Instant;
 public class Auction implements Serializable {
 
 	/** Id of auction. */
-	@JsonProperty public long id; // primary key
+	public long id; // primary key
 
 	/** Extra auction properties. */
-	@JsonProperty public String itemName;
+	public String itemName;
 
-	@JsonProperty public String description;
+	public String description;
 
 	/** Initial bid price, in cents. */
-	@JsonProperty public long initialBid;
+	public long initialBid;
 
 	/** Reserve price, in cents. */
-	@JsonProperty public long reserve;
+	public long reserve;
 
-	@JsonProperty public Instant dateTime;
+	public Instant dateTime;
 
 	/** When does auction expire? (ms since epoch). Bids at or after this time are ignored. */
-	@JsonProperty public Instant expires;
+	public Instant expires;
 
 	/** Id of person who instigated auction. */
-	@JsonProperty public long seller; // foreign key: Person.id
+	public long seller; // foreign key: Person.id
 
 	/** Id of category auction is listed under. */
-	@JsonProperty public long category; // foreign key: Category.id
+	public long category; // foreign key: Category.id
 
 	/** Additional arbitrary payload for performance testing. */
-	@JsonProperty public String extra;
+	public String extra;
 
 	public Auction(
 			long id,
@@ -83,11 +79,18 @@ public class Auction implements Serializable {
 
 	@Override
 	public String toString() {
-		try {
-			return NexmarkUtils.MAPPER.writeValueAsString(this);
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
-		}
+		return "Auction{" +
+				"id=" + id +
+				", itemName='" + itemName + '\'' +
+				", description='" + description + '\'' +
+				", initialBid=" + initialBid +
+				", reserve=" + reserve +
+				", dateTime=" + dateTime +
+				", expires=" + expires +
+				", seller=" + seller +
+				", category=" + category +
+				", extra='" + extra + '\'' +
+				'}';
 	}
 
 	@Override
