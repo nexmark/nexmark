@@ -3,7 +3,6 @@
 -- -------------------------------------------------------------------------------------------------
 -- How many distinct users join the bidding for different level of price for a channel?
 -- Illustrates multiple distinct aggregations with filters for multiple keys.
--- (Implements by Unbounded aggregation)
 -- -------------------------------------------------------------------------------------------------
 
 CREATE TABLE discard_sink (

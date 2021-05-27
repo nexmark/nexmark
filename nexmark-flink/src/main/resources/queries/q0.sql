@@ -16,4 +16,4 @@ CREATE TABLE discard_sink (
 );
 
 INSERT INTO discard_sink
-SELECT * FROM bid;
+SELECT auction, bidder, price, dateTime, extra FROM bid;

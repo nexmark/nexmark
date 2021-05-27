@@ -34,6 +34,13 @@ These are multiple queries over a three entities model representing on online au
 | q13 | Bounded Side Input Join | Joins a stream to a bounded side input, modeling basic stream enrichment. | ✅ |
 | q14 | Calculation | Convert bid timestamp into types and find bids with specific price. Illustrates more complex projection and filter.  | ✅ |
 | q15 | Bidding Statistics Report | How many distinct users join the bidding for different level of price? Illustrates multiple distinct aggregations with filters. | ✅ |
+| q16 | Channel Statistics Report | How many distinct users join the bidding for different level of price for a channel? Illustrates multiple distinct aggregations with filters for multiple keys. | ✅ |
+| q17 | Auction Statistics Report | How many bids on an auction made a day and what is the price? Illustrates an unbounded group aggregation. | ✅ |
+| q18 | Find last bid | What's a's last bid for bidder to auction? Illustrates a Deduplicate query. | ✅ |
+| q19 | Auction TOP-10 Price | What's the top price 10 bids of an auction? Illustrates a TOP-N query. | ✅ |
+| q20 | Expand bid with auction | Get bids with the corresponding auction information where category is 10. Illustrates a filter join. | ✅ |
+| q21 | Add channel id | Add a channel_id column to the bid table. Illustrates a 'CASE WHEN' + 'REGEXP_EXTRACT' SQL. | ✅ |
+| q22 | Get URL Directories | What is the directory structure of the URL? Illustrates a SPLIT_INDEX SQL. | ✅ |
 
 *Note: q1 ~ q8 are from original [NEXMark queries](https://web.archive.org/web/20100620010601/http://datalab.cs.pdx.edu/niagaraST/NEXMark/), q0 and q9 ~ q13 are from [Apache Beam](https://beam.apache.org/documentation/sdks/java/testing/nexmark), others are extended to cover more scenarios.*
 

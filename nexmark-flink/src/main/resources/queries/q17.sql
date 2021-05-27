@@ -1,9 +1,8 @@
 -- -------------------------------------------------------------------------------------------------
 -- Query 17: Auction Statistics Report (Not in original suite)
 -- -------------------------------------------------------------------------------------------------
--- How many bids on a auction made a day and what is the price?
+-- How many bids on an auction made a day and what is the price?
 -- Illustrates an unbounded group aggregation.
--- (Implements by Unbounded aggregation)
 -- -------------------------------------------------------------------------------------------------
 
 CREATE TABLE discard_sink (
