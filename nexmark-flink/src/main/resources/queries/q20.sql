@@ -9,8 +9,8 @@
 --  As a workaround, we re-create a new view without rowtime attribute for now.
 DROP VIEW IF EXISTS auction;
 DROP VIEW IF EXISTS bid;
-CREATE VIEW auction AS SELECT auction.* FROM nexmark WHERE event_type = 1;
-CREATE VIEW bid AS SELECT bid.* FROM nexmark WHERE event_type = 2;
+CREATE VIEW auction AS SELECT auction.* FROM ${NEXMARK_TABLE} WHERE event_type = 1;
+CREATE VIEW bid AS SELECT bid.* FROM ${NEXMARK_TABLE} WHERE event_type = 2;
 
 CREATE TABLE discard_sink (
     auction  BIGINT,

@@ -13,7 +13,7 @@ CREATE TABLE discard_sink (
     url  VARCHAR,
     dateTime  TIMESTAMP(3),
     extra  VARCHAR,
-    rank  BIGINT
+    rank_number  BIGINT
 ) WITH (
   'connector' = 'blackhole'
 );
