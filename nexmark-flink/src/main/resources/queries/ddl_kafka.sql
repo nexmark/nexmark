@@ -24,6 +24,8 @@ CREATE TABLE kafka (
         auction  BIGINT,
         bidder  BIGINT,
         price  BIGINT,
+        channel  VARCHAR,
+        url  VARCHAR,
         dateTime  TIMESTAMP(3),
         extra  VARCHAR>,
     dateTime AS
