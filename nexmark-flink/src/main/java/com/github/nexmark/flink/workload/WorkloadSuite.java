@@ -36,6 +36,7 @@ public class WorkloadSuite {
 	private static final String QUERIES_CONF_SUFFIX = ".queries";
 	private static final String TPS_CONF_SUFFIX = ".tps";
 	private static final String EVENTS_NUM_CONF_SUFFIX = "." + NexmarkSourceOptions.EVENTS_NUM.key();
+	private static final String KAFKA_BOOTSTRAP_SERVERS = "kafka.bootstrap.servers";
 
 	private final Map<String, Workload> query2Workload;
 
@@ -70,6 +71,7 @@ public class WorkloadSuite {
 	public static WorkloadSuite fromConf(Configuration nexmarkConf) {
 		Map<String, String> confMap = nexmarkConf.toMap();
 		Set<String> suites = new HashSet<>();
+		String kafkaServers = confMap.getOrDefault(KAFKA_BOOTSTRAP_SERVERS, null);
 		confMap.keySet().forEach(k -> {
 			if (k.startsWith(WORKLOAD_SUITE_CONF_PREFIX) && k.endsWith(QUERIES_CONF_SUFFIX)) {
 				String suiteName = k.substring(
@@ -109,8 +111,14 @@ public class WorkloadSuite {
 					}
 				}
 			}
+
+			if (eventsNum > 0 && kafkaServers != null) {
+				throw new UnsupportedOperationException(
+						"Kafka source is endless, only supports tps mode (unlimited events.num) now");
+			}
+
 			Workload load = new Workload(
-					tps, eventsNum, personProportion, auctionProportion, bidProportion);
+					tps, eventsNum, personProportion, auctionProportion, bidProportion, kafkaServers);
 
 			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + QUERIES_CONF_SUFFIX;
 			List<String> queries = new ArrayList<>();

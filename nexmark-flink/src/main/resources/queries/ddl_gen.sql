@@ -1,4 +1,4 @@
-CREATE TABLE nexmark (
+CREATE TABLE datagen (
     event_type int,
     person ROW<
         id  BIGINT,
@@ -42,38 +42,3 @@ CREATE TABLE nexmark (
     'auction.proportion' = '${AUCTION_PROPORTION}',
     'bid.proportion' = '${BID_PROPORTION}'
 );
-
-CREATE VIEW person AS
-SELECT
-    person.id,
-    person.name,
-    person.emailAddress,
-    person.creditCard,
-    person.city,
-    person.state,
-    dateTime,
-    person.extra
-FROM nexmark WHERE event_type = 0;
-
-CREATE VIEW auction AS
-SELECT
-    auction.id,
-    auction.itemName,
-    auction.description,
-    auction.initialBid,
-    auction.reserve,
-    dateTime,
-    auction.expires,
-    auction.seller,
-    auction.category,
-    auction.extra
-FROM nexmark WHERE event_type = 1;
-
-CREATE VIEW bid AS
-SELECT
-    bid.auction,
-    bid.bidder,
-    bid.price,
-    dateTime,
-    bid.extra
-FROM nexmark WHERE event_type = 2;
