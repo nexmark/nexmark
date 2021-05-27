@@ -19,6 +19,6 @@ CREATE TABLE discard_sink (
 
 INSERT INTO discard_sink
 SELECT auction, bidder, price, channel, url, dateTime, extra
- FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY dateTime) AS rank_number
+ FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY dateTime DESC) AS rank_number
        FROM bid)
  WHERE rank_number <= 1;

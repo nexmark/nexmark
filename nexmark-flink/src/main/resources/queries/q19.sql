@@ -20,5 +20,5 @@ CREATE TABLE discard_sink (
 
 INSERT INTO discard_sink
 SELECT * FROM
-(SELECT *, ROW_NUMBER() OVER (PARTITION BY auction ORDER BY price) AS rank_number FROM bid)
+(SELECT *, ROW_NUMBER() OVER (PARTITION BY auction ORDER BY price DESC) AS rank_number FROM bid)
 WHERE rank_number <= 10;

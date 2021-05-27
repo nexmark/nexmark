@@ -174,7 +174,7 @@ public class NexmarkTableSourceITCase {
 	@Test
 	public void q18() {
 		print(tEnv.executeSql("SELECT auction, bidder, price, channel, url, dateTime, extra\n" +
-				" FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY dateTime) AS rank_number\n" +
+				" FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY dateTime DESC) AS rank_number\n" +
 				"       FROM bid)\n" +
 				" WHERE rank_number <= 1"));
 	}
@@ -182,7 +182,7 @@ public class NexmarkTableSourceITCase {
 	@Test
 	public void q19() {
 		print(tEnv.executeSql("SELECT * FROM\n" +
-				"(SELECT *, ROW_NUMBER() OVER (PARTITION BY auction ORDER BY price) AS rank_number FROM bid)\n" +
+				"(SELECT *, ROW_NUMBER() OVER (PARTITION BY auction ORDER BY price DESC) AS rank_number FROM bid)\n" +
 				"WHERE rank_number <= 10"));
 	}
 
