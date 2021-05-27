@@ -65,17 +65,44 @@ public class NexmarkTableSourceITCase {
 			"        bidder  BIGINT,\n" +
 			"        price  BIGINT,\n" +
 			"        dateTime  TIMESTAMP(3),\n" +
-			"        extra  VARCHAR>\n" +
+			"        extra  VARCHAR>,\n" +
+			"    dateTime AS\n" +
+			"        CASE\n" +
+			"            WHEN event_type = 0 THEN person.dateTime\n" +
+			"            WHEN event_type = 1 THEN auction.dateTime\n" +
+			"            ELSE bid.dateTime\n" +
+			"        END,\n" +
+			"    WATERMARK FOR dateTime AS dateTime - INTERVAL '4' SECOND" +
 			") WITH (\n" +
 			"    'connector' = 'nexmark',\n" +
 			"    'events.num' = '100'\n" +
 			")");
 		tEnv.executeSql("CREATE VIEW person AS\n" +
-			"SELECT t.person.* FROM nexmark AS t WHERE event_type = 0");
+			"SELECT  person.id,\n" +
+				"    person.name,\n" +
+				"    person.emailAddress,\n" +
+				"    person.creditCard,\n" +
+				"    person.city,\n" +
+				"    person.state,\n" +
+				"    dateTime,\n" +
+				"    person.extra FROM nexmark AS t WHERE event_type = 0");
 		tEnv.executeSql("CREATE VIEW auction AS\n" +
-			"SELECT t.auction.* FROM nexmark AS t WHERE event_type = 1");
+			"SELECT  auction.id,\n" +
+				"    auction.itemName,\n" +
+				"    auction.description,\n" +
+				"    auction.initialBid,\n" +
+				"    auction.reserve,\n" +
+				"    dateTime,\n" +
+				"    auction.expires,\n" +
+				"    auction.seller,\n" +
+				"    auction.category,\n" +
+				"    auction.extra FROM nexmark AS t WHERE event_type = 1");
 		tEnv.executeSql("CREATE VIEW bid AS\n" +
-			"SELECT t.bid.* FROM nexmark AS t WHERE event_type = 2");
+			"SELECT  bid.auction,\n" +
+				"    bid.bidder,\n" +
+				"    bid.price,\n" +
+				"    dateTime,\n" +
+				"    bid.extra FROM nexmark AS t WHERE event_type = 2");
 	}
 
 	@Test

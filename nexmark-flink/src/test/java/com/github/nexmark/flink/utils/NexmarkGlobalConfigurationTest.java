@@ -24,6 +24,8 @@ import org.junit.Test;
 
 import java.net.URL;
 
+import static com.github.nexmark.flink.FlinkNexmarkOptions.FLINK_REST_ADDRESS;
+import static com.github.nexmark.flink.FlinkNexmarkOptions.FLINK_REST_PORT;
 import static org.junit.Assert.assertEquals;
 
 public class NexmarkGlobalConfigurationTest {
@@ -33,11 +35,7 @@ public class NexmarkGlobalConfigurationTest {
 		URL confDir = NexmarkGlobalConfigurationTest.class.getClassLoader().getResource("conf");
 		assert confDir != null;
 		Configuration conf = NexmarkGlobalConfiguration.loadConfiguration(confDir.getPath());
-		Configuration expected = new Configuration();
-		expected.setString("nexmark.metric.monitor.delay", "3min");
-		expected.setString("nexmark.metric.monitor.duration", "3min");
-		expected.setString("flink.rest.address", "localhost");
-		expected.setString("flink.rest.port", "8081");
-		assertEquals(expected, conf);
+		assertEquals(8081, conf.getInteger(FLINK_REST_PORT, -1));
+		assertEquals("localhost", conf.getString(FLINK_REST_ADDRESS, ""));
 	}
 }
