@@ -12,7 +12,7 @@ CREATE TABLE discard_sink (
     channel  VARCHAR,
     url  VARCHAR,
     dateTime  TIMESTAMP(3),
-    extra  VARCHAR,
+    extra  VARCHAR
 ) WITH (
   'connector' = 'blackhole'
 );
