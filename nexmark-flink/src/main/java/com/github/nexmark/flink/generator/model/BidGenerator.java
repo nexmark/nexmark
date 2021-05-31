@@ -17,11 +17,16 @@
  */
 package com.github.nexmark.flink.generator.model;
 
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.table.utils.ThreadLocalCache;
+
 import com.github.nexmark.flink.generator.GeneratorConfig;
 import com.github.nexmark.flink.model.Bid;
 
 import java.time.Instant;
 import java.util.Random;
+
+import static com.github.nexmark.flink.generator.model.StringsGenerator.nextString;
 
 /** Generates bids. */
 public class BidGenerator {
@@ -33,6 +38,26 @@ public class BidGenerator {
   private static final int HOT_AUCTION_RATIO = 100;
 
   private static final int HOT_BIDDER_RATIO = 100;
+
+  private static final int HOT_CHANNELS_RATIO = 2;
+
+  private static final int CHANNELS_NUMBER = 10_000;
+
+  private static final String[] HOT_CHANNELS = new String[] {"Google", "Facebook", "Baidu", "Apple"};
+  private static final String[] HOT_URLS = new String[] {getBaseUrl(), getBaseUrl(), getBaseUrl(), getBaseUrl()};
+
+  private static final ThreadLocalCache<Integer, Tuple2<String, String>> CHANNEL_URL_CACHE =
+          new ThreadLocalCache<Integer, Tuple2<String, String>>(CHANNELS_NUMBER) {
+
+            @Override
+            public Tuple2<String, String> getNewInstance(Integer channelNumber) {
+              String url = getBaseUrl();
+              if (new Random().nextInt(10) > 0) {
+                url = url + "&channel_id=" + Math.abs(Integer.reverse(channelNumber));
+              }
+              return new Tuple2<>("channel-" + channelNumber, url);
+            }
+  };
 
   /** Generate and return a random bid with next available id. */
   public static Bid nextBid(long eventId, Random random, long timestamp, GeneratorConfig config) {
@@ -59,8 +84,32 @@ public class BidGenerator {
     bidder += GeneratorConfig.FIRST_PERSON_ID;
 
     long price = PriceGenerator.nextPrice(random);
+
+    String channel;
+    String url;
+    if (random.nextInt(HOT_CHANNELS_RATIO) > 0) {
+      int i = random.nextInt(HOT_CHANNELS.length);
+      channel = HOT_CHANNELS[i];
+      url = HOT_URLS[i];
+    } else {
+      Tuple2<String, String> channelAndUrl = CHANNEL_URL_CACHE.get(random.nextInt(CHANNELS_NUMBER));
+      channel = channelAndUrl.f0;
+      url = channelAndUrl.f1;
+    }
+
+    bidder += GeneratorConfig.FIRST_PERSON_ID;
+
     int currentSize = 8 + 8 + 8 + 8;
     String extra = StringsGenerator.nextExtra(random, currentSize, config.getAvgBidByteSize());
-    return new Bid(auction, bidder, price, Instant.ofEpochMilli(timestamp), extra);
+    return new Bid(auction, bidder, price, channel, url, Instant.ofEpochMilli(timestamp), extra);
+  }
+
+  private static String getBaseUrl() {
+    Random random = new Random();
+    return "https://www.nexmark.com/" +
+            nextString(random, 5, '_') + '/' +
+            nextString(random, 5, '_') + '/' +
+            nextString(random, 5, '_') + '/' +
+            "item.htm?query=1";
   }
 }

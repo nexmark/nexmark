@@ -29,6 +29,8 @@ SELECT
     bid.auction,
     bid.bidder,
     bid.price,
+    bid.channel,
+    bid.url,
     dateTime,
     bid.extra
 FROM ${NEXMARK_TABLE} WHERE event_type = 2;

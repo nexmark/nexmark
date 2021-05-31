@@ -68,6 +68,8 @@ public class NexmarkTableSource implements ScanTableSource {
 			FIELD("auction", BIGINT()),
 			FIELD("bidder", BIGINT()),
 			FIELD("price", BIGINT()),
+			FIELD("channel", STRING()),
+			FIELD("url", STRING()),
 			FIELD("dateTime", TIMESTAMP(3)),
 			FIELD("extra", STRING())))
 		.build();

@@ -27,11 +27,15 @@ public class StringsGenerator {
 
   /** Return a random string of up to {@code maxLength}. */
   public static String nextString(Random random, int maxLength) {
+    return nextString(random, maxLength, ' ');
+  }
+
+  public static String nextString(Random random, int maxLength, char special) {
     int len = MIN_STRING_LENGTH + random.nextInt(maxLength - MIN_STRING_LENGTH);
     StringBuilder sb = new StringBuilder();
     while (len-- > 0) {
       if (random.nextInt(13) == 0) {
-        sb.append(' ');
+        sb.append(special);
       } else {
         sb.append((char) ('a' + random.nextInt(26)));
       }

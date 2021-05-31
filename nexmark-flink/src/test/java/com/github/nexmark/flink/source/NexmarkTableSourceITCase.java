@@ -20,7 +20,10 @@ package com.github.nexmark.flink.source;
 
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.types.Row;
+import org.apache.flink.util.CloseableIterator;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -64,6 +67,8 @@ public class NexmarkTableSourceITCase {
 			"        auction  BIGINT,\n" +
 			"        bidder  BIGINT,\n" +
 			"        price  BIGINT,\n" +
+			"        channel  VARCHAR,\n" +
+			"        url  VARCHAR,\n" +
 			"        dateTime  TIMESTAMP(3),\n" +
 			"        extra  VARCHAR>,\n" +
 			"    dateTime AS\n" +
@@ -75,7 +80,7 @@ public class NexmarkTableSourceITCase {
 			"    WATERMARK FOR dateTime AS dateTime - INTERVAL '4' SECOND" +
 			") WITH (\n" +
 			"    'connector' = 'nexmark',\n" +
-			"    'events.num' = '100'\n" +
+			"    'events.num' = '500'\n" +
 			")");
 		tEnv.executeSql("CREATE VIEW person AS\n" +
 			"SELECT  person.id,\n" +
@@ -101,29 +106,139 @@ public class NexmarkTableSourceITCase {
 			"SELECT  bid.auction,\n" +
 				"    bid.bidder,\n" +
 				"    bid.price,\n" +
+				"    bid.channel,\n" +
+				"    bid.url,\n" +
 				"    dateTime,\n" +
 				"    bid.extra FROM nexmark AS t WHERE event_type = 2");
 	}
 
 	@Test
 	public void testAllEvents() {
-		tEnv.executeSql("SELECT * FROM nexmark").print();
+		print(tEnv.executeSql("SELECT * FROM nexmark"));
 	}
 
 	@Test
 	public void testPersonSource() {
-		tEnv.executeSql("SELECT * FROM person").print();
+		print(tEnv.executeSql("SELECT * FROM person"));
 	}
-
 
 	@Test
 	public void testAuctionSource() {
-		tEnv.executeSql("SELECT * FROM auction").print();
+		print(tEnv.executeSql("SELECT * FROM auction"));
 	}
 
 	@Test
 	public void testBidSource() {
-		tEnv.executeSql("SELECT * FROM bid").print();
+		print(tEnv.executeSql("SELECT * FROM bid"));
 	}
 
+	@Test
+	public void q16() {
+		print(tEnv.executeSql("SELECT\n" +
+				"    channel,\n" +
+				"    DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,\n" +
+				"    max(DATE_FORMAT(dateTime, 'HH:mm')) as `minute`,\n" +
+				"    count(*) AS total_bids,\n" +
+				"    count(*) filter (where price < 10000) AS rank1_bids,\n" +
+				"        count(*) filter (where price >= 10000 and price < 1000000) AS rank2_bids,\n" +
+				"        count(*) filter (where price >= 1000000) AS rank3_bids,\n" +
+				"        count(distinct bidder) AS total_bidders,\n" +
+				"    count(distinct bidder) filter (where price < 10000) AS rank1_bidders,\n" +
+				"        count(distinct bidder) filter (where price >= 10000 and price < 1000000) AS rank2_bidders,\n" +
+				"        count(distinct bidder) filter (where price >= 1000000) AS rank3_bidders,\n" +
+				"        count(distinct auction) AS total_auctions,\n" +
+				"    count(distinct auction) filter (where price < 10000) AS rank1_auctions,\n" +
+				"        count(distinct auction) filter (where price >= 10000 and price < 1000000) AS rank2_auctions,\n" +
+				"        count(distinct auction) filter (where price >= 1000000) AS rank3_auctions\n" +
+				"FROM bid\n" +
+				"GROUP BY channel, DATE_FORMAT(dateTime, 'yyyy-MM-dd')"));
+	}
+
+	@Test
+	public void q17() {
+		print(tEnv.executeSql("SELECT\n" +
+				"     auction,\n" +
+				"     DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,\n" +
+				"     count(*) AS total_bids,\n" +
+				"     count(*) filter (where price < 10000) AS rank1_bids,\n" +
+				"     count(*) filter (where price >= 10000 and price < 1000000) AS rank2_bids,\n" +
+				"     count(*) filter (where price >= 1000000) AS rank3_bids,\n" +
+				"     min(price) AS min_price,\n" +
+				"     max(price) AS max_price,\n" +
+				"     avg(price) AS avg_price,\n" +
+				"     sum(price) AS sum_price\n" +
+				"FROM bid\n" +
+				"GROUP BY auction, DATE_FORMAT(dateTime, 'yyyy-MM-dd')"));
+	}
+
+	@Test
+	public void q18() {
+		print(tEnv.executeSql("SELECT auction, bidder, price, channel, url, dateTime, extra\n" +
+				" FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY dateTime DESC) AS rank_number\n" +
+				"       FROM bid)\n" +
+				" WHERE rank_number <= 1"));
+	}
+
+	@Test
+	public void q19() {
+		print(tEnv.executeSql("SELECT * FROM\n" +
+				"(SELECT *, ROW_NUMBER() OVER (PARTITION BY auction ORDER BY price DESC) AS rank_number FROM bid)\n" +
+				"WHERE rank_number <= 10"));
+	}
+
+	@Test
+	public void q20() {
+		removeRowTime();
+		print(tEnv.executeSql("SELECT\n" +
+				"    auction, bidder, price, channel, url, B.dateTime, B.extra,\n" +
+				"    itemName, description, initialBid, reserve, A.dateTime, expires, seller, category, A.extra\n" +
+				"FROM\n" +
+				"    bid AS B INNER JOIN auction AS A on B.auction = A.id\n" +
+				"WHERE A.category = 10"));
+	}
+
+	@Test
+	public void q21() {
+		print(tEnv.executeSql("SELECT\n" +
+				"    auction, bidder, price, channel,\n" +
+				"    CASE\n" +
+				"        WHEN lower(channel) = 'apple' THEN '0'\n" +
+				"        WHEN lower(channel) = 'google' THEN '1'\n" +
+				"        WHEN lower(channel) = 'facebook' THEN '2'\n" +
+				"        WHEN lower(channel) = 'baidu' THEN '3'\n" +
+				"        ELSE REGEXP_EXTRACT(url, '(&|^)channel_id=([^&]*)', 2)\n" +
+				"        END\n" +
+				"    AS channel_id FROM bid\n" +
+				"    where REGEXP_EXTRACT(url, '(&|^)channel_id=([^&]*)', 2) is not null or\n" +
+				"          lower(channel) in ('apple', 'google', 'facebook', 'baidu')"));
+	}
+
+	@Test
+	public void q22() {
+		print(tEnv.executeSql("SELECT\n" +
+				"    auction, bidder, price, channel,\n" +
+				"    SPLIT_INDEX(url, '/', 3) as dir1,\n" +
+				"    SPLIT_INDEX(url, '/', 4) as dir2,\n" +
+				"    SPLIT_INDEX(url, '/', 5) as dir3 FROM bid"));
+	}
+
+	private void print(TableResult result) {
+		// TableResult.print will truncate string value
+		try (CloseableIterator<Row> iter = result.collect()) {
+			while (iter.hasNext()) {
+				System.out.println(iter.next());
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void removeRowTime() {
+		tEnv.executeSql("DROP VIEW IF EXISTS person");
+		tEnv.executeSql("DROP VIEW IF EXISTS auction");
+		tEnv.executeSql("DROP VIEW IF EXISTS bid");
+		tEnv.executeSql("CREATE VIEW person AS SELECT person.* FROM nexmark WHERE event_type = 0");
+		tEnv.executeSql("CREATE VIEW auction AS SELECT auction.* FROM nexmark WHERE event_type = 1");
+		tEnv.executeSql("CREATE VIEW bid AS SELECT bid.* FROM nexmark WHERE event_type = 2");
+	}
 }

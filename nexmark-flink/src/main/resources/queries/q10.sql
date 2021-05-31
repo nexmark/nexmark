@@ -27,5 +27,5 @@ CREATE TABLE fs_sink (
 );
 
 INSERT INTO fs_sink
-SELECT *, DATE_FORMAT(dateTime, 'yyyy-MM-dd'), DATE_FORMAT(dateTime, 'HH:mm')
+SELECT auction, bidder, price, dateTime, extra, DATE_FORMAT(dateTime, 'yyyy-MM-dd'), DATE_FORMAT(dateTime, 'HH:mm')
 FROM bid;
