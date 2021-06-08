@@ -57,7 +57,7 @@ Time is the cost time for specified number of events executed by the stream proc
 
 ### Requirements
 
-The Nexmark benchmark framework runs Flink queries on [standalone cluster](https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/deployment/cluster_setup.html), see the Flink documentation for more detailed requirements and how to setup it.
+The Nexmark benchmark framework runs Flink queries on [standalone cluster](https://ci.apache.org/projects/flink/flink-docs-release-1.13/ops/deployment/cluster_setup.html), see the Flink documentation for more detailed requirements and how to setup it.
 
 #### Software Requirements
 
