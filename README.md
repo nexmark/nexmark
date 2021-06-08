@@ -57,7 +57,7 @@ Time is the cost time for specified number of events executed by the stream proc
 
 ### Requirements
 
-The Nexmark benchmark framework runs Flink queries on [standalone cluster](https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/deployment/cluster_setup.html), see the Flink documentation for more detailed requirements and how to setup it.
+The Nexmark benchmark framework runs Flink queries on [standalone cluster](https://ci.apache.org/projects/flink/flink-docs-release-1.13/ops/deployment/cluster_setup.html), see the Flink documentation for more detailed requirements and how to setup it.
 
 #### Software Requirements
 
@@ -105,6 +105,7 @@ Before start to run the benchmark, you should build the Nexmark benchmark first 
 - Step7: Start Flink Cluster by running `flink/bin/start-cluster.sh` on the master node.
 - Step8: Setup the benchmark cluster by running `nexmark/bin/setup_cluster.sh` on the master node.
 - (If you want to use kafka source instead of datagen source) Step9: Prepare Kafka
+  - (Please make sure Flink Kafka Jar is ready in flink/lib/ [download page](https://ci.apache.org/projects/flink/flink-docs-release-1.13/docs/connectors/table/kafka/#dependencies))
   - Start your kafka cluster. (recommend to use SSD)
   - Create kafka topic: `bin/kafka-topics.sh --create --topic nexmark --bootstrap-server localhost:9092 --partitions 8`.
   - Edit `nexmark/conf/nexmark.yaml`, set `kafka.bootstrap.servers`.
