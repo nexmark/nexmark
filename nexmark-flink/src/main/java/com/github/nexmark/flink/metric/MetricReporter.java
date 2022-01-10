@@ -19,7 +19,7 @@
 package com.github.nexmark.flink.metric;
 
 import org.apache.flink.api.common.time.Deadline;
-import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.api.java.tuple.Tuple2;
 
 import com.github.nexmark.flink.metric.cpu.CpuMetricReceiver;
 import com.github.nexmark.flink.metric.tps.TpsMetric;
@@ -61,18 +61,16 @@ public class MetricReporter {
 		this.metrics = new ArrayList<>();
 	}
 
-	private void submitMonitorThread(long eventsNum) {
+	private void submitMonitorThread(String jobId, long eventsNum) {
 
-		String jobId;
 		String vertexId;
 		String metricName;
 
 		while (true) {
-			Tuple3<String, String, String> jobInfo = getJobInformation();
+			Tuple2<String, String> jobInfo = getJobInformation(jobId);
 			if (jobInfo != null) {
-				jobId = jobInfo.f0;
-				vertexId = jobInfo.f1;
-				metricName = jobInfo.f2;
+				vertexId = jobInfo.f0;
+				metricName = jobInfo.f1;
 				break;
 			} else {
 				// wait for the job startup
@@ -92,12 +90,11 @@ public class MetricReporter {
 		);
 	}
 
-	private Tuple3<String, String, String> getJobInformation() {
+	private Tuple2<String, String> getJobInformation(String jobId) {
 		try {
-			String jobId = flinkRestClient.getCurrentJobId();
 			String vertexId = flinkRestClient.getSourceVertexId(jobId);
 			String metricName = flinkRestClient.getTpsMetricName(jobId, vertexId);
-			return Tuple3.of(jobId, vertexId, metricName);
+			return Tuple2.of(vertexId, metricName);
 		} catch (Exception e) {
 			LOG.warn("Job metric is not ready yet.", e);
 			return null;
@@ -135,7 +132,7 @@ public class MetricReporter {
 		}
 	}
 
-	public JobBenchmarkMetric reportMetric(long eventsNum) {
+	public JobBenchmarkMetric reportMetric(String jobId, long eventsNum) {
 		System.out.printf("Monitor metrics after %s seconds.%n", monitorDelay.getSeconds());
 		long startTime = System.currentTimeMillis();
 		waitFor(monitorDelay);
@@ -144,7 +141,7 @@ public class MetricReporter {
 		} else {
 			System.out.println("Start to monitor metrics until job is finished.");
 		}
-		submitMonitorThread(eventsNum);
+		submitMonitorThread(jobId, eventsNum);
 		if (eventsNum == 0) {
 			waitFor(monitorDuration);
 		} else {
