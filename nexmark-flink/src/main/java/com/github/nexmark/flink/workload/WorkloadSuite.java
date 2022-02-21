@@ -22,6 +22,7 @@ import org.apache.flink.configuration.Configuration;
 
 import com.github.nexmark.flink.source.NexmarkSourceOptions;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,6 +37,8 @@ public class WorkloadSuite {
 	private static final String QUERIES_CONF_SUFFIX = ".queries";
 	private static final String TPS_CONF_SUFFIX = ".tps";
 	private static final String EVENTS_NUM_CONF_SUFFIX = "." + NexmarkSourceOptions.EVENTS_NUM.key();
+	private static final String WARMUP_SUFFIX = ".warmup";
+	private static final String WARMUP_DURATION_SUFFIX = ".warmup.duration";
 	private static final String KAFKA_BOOTSTRAP_SERVERS = "kafka.bootstrap.servers";
 
 	private final Map<String, Workload> query2Workload;
@@ -117,8 +120,25 @@ public class WorkloadSuite {
 						"Kafka source is endless, only supports tps mode (unlimited events.num) now");
 			}
 
+			Duration warmupDuration = Duration.parse(confMap.getOrDefault(
+					WORKLOAD_SUITE_CONF_PREFIX + suiteName + WARMUP_DURATION_SUFFIX,
+					"120s"));
+
+			long warmupTps = Long.parseLong(confMap.getOrDefault(
+					WORKLOAD_SUITE_CONF_PREFIX + suiteName + WARMUP_SUFFIX + TPS_CONF_SUFFIX,
+					String.valueOf(tps)));
+
+			long warmupEventsNum = Long.parseLong(confMap.getOrDefault(
+					WORKLOAD_SUITE_CONF_PREFIX + suiteName + WARMUP_SUFFIX + EVENTS_NUM_CONF_SUFFIX,
+					String.valueOf(eventsNum)));
+
+			if (warmupEventsNum > 0L && kafkaServers != null) {
+				throw new UnsupportedOperationException(
+						"Kafka source is endless, warmup only supports tps mode (unlimited warmup.events.num) now");
+			}
+
 			Workload load = new Workload(
-					tps, eventsNum, personProportion, auctionProportion, bidProportion, kafkaServers);
+					tps, eventsNum, personProportion, auctionProportion, bidProportion, kafkaServers, warmupDuration.toMillis(), warmupTps, warmupEventsNum);
 
 			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + QUERIES_CONF_SUFFIX;
 			List<String> queries = new ArrayList<>();

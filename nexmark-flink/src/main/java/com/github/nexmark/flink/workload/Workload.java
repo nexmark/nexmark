@@ -36,9 +36,12 @@ public class Workload {
 	private final int auctionProportion;
 	private final int bidProportion;
 	private final @Nullable String kafkaServers;
+	private final long warmupMills;
+	private final long warmupTps;
+	private final long warmupEvents;
 
 	public Workload(long tps, long eventsNum, int personProportion, int auctionProportion, int bidProportion) {
-		this(tps, eventsNum, personProportion, auctionProportion, bidProportion, null);
+		this(tps, eventsNum, personProportion, auctionProportion, bidProportion, null, 0L, 0, 0);
 	}
 
 	public Workload(
@@ -47,13 +50,19 @@ public class Workload {
 			int personProportion,
 			int auctionProportion,
 			int bidProportion,
-			@Nullable String kafkaServers) {
+			@Nullable String kafkaServers,
+			long warmupMills,
+			long warmupTps,
+			long warmupEvents) {
 		this.tps = tps;
 		this.eventsNum = eventsNum;
 		this.personProportion = personProportion;
 		this.auctionProportion = auctionProportion;
 		this.bidProportion = bidProportion;
 		this.kafkaServers = kafkaServers;
+		this.warmupMills = warmupMills;
+		this.warmupTps = warmupTps;
+		this.warmupEvents = warmupEvents;
 	}
 
 	public long getTps() {
@@ -78,6 +87,18 @@ public class Workload {
 
 	public String getKafkaServers() {
 		return kafkaServers;
+	}
+
+	public long getWarmupMills() {
+		return warmupMills;
+	}
+
+	public long getWarmupTps() {
+		return warmupTps;
+	}
+
+	public long getWarmupEvents() {
+		return warmupEvents;
 	}
 
 	public void validateWorkload(Duration monitorDuration) {
