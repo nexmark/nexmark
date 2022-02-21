@@ -21,6 +21,7 @@ package com.github.nexmark.flink.workload;
 import org.apache.flink.configuration.Configuration;
 
 import com.github.nexmark.flink.source.NexmarkSourceOptions;
+import org.apache.flink.util.TimeUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -120,7 +121,7 @@ public class WorkloadSuite {
 						"Kafka source is endless, only supports tps mode (unlimited events.num) now");
 			}
 
-			Duration warmupDuration = Duration.parse(confMap.getOrDefault(
+			Duration warmupDuration = TimeUtils.parseDuration(confMap.getOrDefault(
 					WORKLOAD_SUITE_CONF_PREFIX + suiteName + WARMUP_DURATION_SUFFIX,
 					"120s"));
 
