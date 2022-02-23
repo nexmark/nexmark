@@ -41,7 +41,7 @@ public class Workload {
 	private final long warmupEvents;
 
 	public Workload(long tps, long eventsNum, int personProportion, int auctionProportion, int bidProportion) {
-		this(tps, eventsNum, personProportion, auctionProportion, bidProportion, null, 0L, 0, 0);
+		this(tps, eventsNum, personProportion, auctionProportion, bidProportion, null, 0L, 0L, 0L);
 	}
 
 	public Workload(
