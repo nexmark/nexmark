@@ -93,7 +93,7 @@ public class QueryRunner {
 
 	private long waitForOrJobFinish(long mills) {
 		long waited = 0L;
-		while (waited < mills && flinkRestClient.isJobRunning()) {
+		while ((mills <= 0L || waited < mills) && flinkRestClient.isJobRunning()) {
 			try {
 				Thread.sleep(100L);
 				waited += 100L;
