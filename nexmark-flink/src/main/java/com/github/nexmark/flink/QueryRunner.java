@@ -30,7 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -74,8 +73,8 @@ public class QueryRunner {
 				runWarmup(workload.getWarmupTps(), workload.getWarmupEvents());
 				long waited = waitForOrJobFinish(workload.getWarmupMills());
 				waited += cancelJob();
-				System.out.println("Stop the warmup, cost " + Duration.ofMillis(waited) + ".");
-				LOG.info("Stop the warmup, cost " + Duration.ofMillis(waited) + ".");
+				System.out.println("Stop the warmup, cost " + waited + "ms.");
+				LOG.info("Stop the warmup, cost " + waited + ".");
 			}
 			runInternal();
 			// blocking until collect enough metrics
