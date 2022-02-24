@@ -65,7 +65,10 @@ public class QueryRunner {
 			System.out.println("Start to run query " + queryName + " with workload " + workload.getSummaryString());
 			LOG.info("==================================================================");
 			LOG.info("Start to run query " + queryName + " with workload " + workload.getSummaryString());
-			if (!"insert_kafka".equals(queryName) && (workload.getWarmupEvents() > 0L || workload.getWarmupMills() > 0L)) {
+			if (!"insert_kafka".equals(queryName) // no warmup for kafka source prepare
+					&& (workload.getWarmupMills() > 0L || workload.getKafkaServers() == null)  // when using kafka source we need a stop for warmup
+					&& ((workload.getWarmupTps() > 0L && workload.getWarmupEvents() > 0L) || workload.getKafkaServers() != null) // otherwise we need a configuration for datagen source
+			) {
 				System.out.println("Start the warmup for at most " + workload.getWarmupMills() + "ms and " + workload.getWarmupEvents() + " events.");
 				LOG.info("Start the warmup for at most " + workload.getWarmupMills() + "ms and " + workload.getWarmupEvents() + " events.");
 				runWarmup(workload.getWarmupTps(), workload.getWarmupEvents());
@@ -106,8 +109,8 @@ public class QueryRunner {
 
 	private void runWarmup(long tps, long events) throws IOException {
 		Map<String, String> varsMap = initializeVarsMap();
-		varsMap.put("TPS", String.valueOf(tps));
 		if (workload.getKafkaServers() == null) {
+			varsMap.put("TPS", String.valueOf(tps));
 			varsMap.put("EVENTS_NUM", String.valueOf(events));
 		}
 		List<String> sqlLines = initializeAllSqlLines(varsMap);
