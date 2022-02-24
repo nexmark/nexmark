@@ -73,9 +73,8 @@ public class QueryRunner {
 				LOG.info("Start the warmup for at most " + workload.getWarmupMills() + "ms and " + workload.getWarmupEvents() + " events.");
 				runWarmup(workload.getWarmupTps(), workload.getWarmupEvents());
 				long waited = waitForOrJobFinish(workload.getWarmupMills());
-				if (flinkRestClient.isJobRunning()) {
-					flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
-				}
+				waited += cancelJob();
+				System.out.println("Stop the warmup, cost " + Duration.ofMillis(waited) + ".");
 				LOG.info("Stop the warmup, cost " + Duration.ofMillis(waited) + ".");
 			}
 			runInternal();
@@ -85,9 +84,7 @@ public class QueryRunner {
 			// cancel job
 			System.out.println("Stop job query " + queryName);
 			LOG.info("Stop job query " + queryName);
-			if (flinkRestClient.isJobRunning()) {
-				flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
-			}
+			cancelJob();
 			return metrics;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -105,6 +102,21 @@ public class QueryRunner {
 			}
 		}
 		return waited;
+	}
+
+	private long cancelJob() {
+		long cost = 0L;
+		while (flinkRestClient.isJobRunning()) {
+			// make sure the job is canceled.
+			flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
+			try {
+				Thread.sleep(100L);
+				cost += 100L;
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return cost;
 	}
 
 	private void runWarmup(long tps, long events) throws IOException {
