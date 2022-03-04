@@ -18,7 +18,6 @@
 
 package com.github.nexmark.flink;
 
-import com.github.nexmark.flink.metric.BenchmarkMetric;
 import com.github.nexmark.flink.metric.FlinkRestClient;
 import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
@@ -65,6 +64,18 @@ public class QueryRunner {
 			System.out.println("Start to run query " + queryName + " with workload " + workload.getSummaryString());
 			LOG.info("==================================================================");
 			LOG.info("Start to run query " + queryName + " with workload " + workload.getSummaryString());
+			if (!"insert_kafka".equals(queryName) // no warmup for kafka source prepare
+					&& (workload.getWarmupMills() > 0L || workload.getKafkaServers() == null)  // when using kafka source we need a stop for warmup
+					&& ((workload.getWarmupTps() > 0L && workload.getWarmupEvents() > 0L) || workload.getKafkaServers() != null) // otherwise we need a configuration for datagen source
+			) {
+				System.out.println("Start the warmup for at most " + workload.getWarmupMills() + "ms and " + workload.getWarmupEvents() + " events.");
+				LOG.info("Start the warmup for at most " + workload.getWarmupMills() + "ms and " + workload.getWarmupEvents() + " events.");
+				runWarmup(workload.getWarmupTps(), workload.getWarmupEvents());
+				long waited = waitForOrJobFinish(workload.getWarmupMills());
+				waited += cancelJob();
+				System.out.println("Stop the warmup, cost " + waited + "ms.");
+				LOG.info("Stop the warmup, cost " + waited + ".");
+			}
 			runInternal();
 			// blocking until collect enough metrics
 			String jobId = flinkRestClient.getCurrentJobId();
@@ -72,13 +83,49 @@ public class QueryRunner {
 			// cancel job
 			System.out.println("Stop job query " + queryName);
 			LOG.info("Stop job query " + queryName);
-			if (flinkRestClient.isJobRunning()) {
-				flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
-			}
+			cancelJob();
 			return metrics;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private long waitForOrJobFinish(long mills) {
+		long waited = 0L;
+		while ((mills <= 0L || waited < mills) && flinkRestClient.isJobRunning()) {
+			try {
+				Thread.sleep(100L);
+				waited += 100L;
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return waited;
+	}
+
+	private long cancelJob() {
+		long cost = 0L;
+		while (flinkRestClient.isJobRunning()) {
+			// make sure the job is canceled.
+			flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
+			try {
+				Thread.sleep(100L);
+				cost += 100L;
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return cost;
+	}
+
+	private void runWarmup(long tps, long events) throws IOException {
+		Map<String, String> varsMap = initializeVarsMap();
+		if (workload.getKafkaServers() == null) {
+			varsMap.put("TPS", String.valueOf(tps));
+			varsMap.put("EVENTS_NUM", String.valueOf(events));
+		}
+		List<String> sqlLines = initializeAllSqlLines(varsMap);
+		submitSQLJob(sqlLines);
 	}
 
 	private void runInternal() throws IOException {
