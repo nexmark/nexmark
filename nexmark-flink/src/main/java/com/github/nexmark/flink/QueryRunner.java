@@ -105,7 +105,7 @@ public class QueryRunner {
 
 	private long cancelJob() {
 		long cost = 0L;
-		while (flinkRestClient.isJobRunning()) {
+		while (!flinkRestClient.isJobCancellingOrFinished()) {
 			// make sure the job is canceled.
 			flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
 			try {
