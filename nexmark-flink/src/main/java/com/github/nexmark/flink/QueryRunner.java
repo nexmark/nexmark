@@ -48,11 +48,12 @@ public class QueryRunner {
 	private final MetricReporter metricReporter;
 	private final FlinkRestClient flinkRestClient;
 
-	public QueryRunner(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient) {
+	public QueryRunner(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, boolean isQueryCep) {
 		this.queryName = queryName;
 		this.workload = workload;
 		this.location = location;
-		this.queryLocation = location.resolve("queries");
+		this.queryLocation =
+				isQueryCep ? location.resolve("queries-cep") : location.resolve("queries");
 		this.flinkDist = flinkDist;
 		this.metricReporter = metricReporter;
 		this.flinkRestClient = flinkRestClient;

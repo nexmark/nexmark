@@ -62,22 +62,26 @@ public class Benchmark {
 		"nexmark directory.");
 	private static final Option QUERIES = new Option("q", "queries", true,
 		"Query to run. If the value is 'all', all queries will be run.");
+	private static final Option QUERIES_CEP = new Option("c", "queries-cep", true,
+			"Query CEP to run. If the value is 'all', all queries will be run.");
 
 	public static void main(String[] args) throws ParseException {
 		if (args == null || args.length == 0) {
-			throw new RuntimeException("Usage: --queries q1,q3 --location /path/to/nexmark");
+			throw new RuntimeException("Usage: --queries q1,q3 --queries-cep q1,q3 --location /path/to/nexmark");
 		}
 		Options options = getOptions();
 		DefaultParser parser = new DefaultParser();
 		CommandLine line = parser.parse(options, args, true);
 		Path location = new File(line.getOptionValue(LOCATION.getOpt())).toPath();
 		Path queryLocation = location.resolve("queries");
+		Path queryCepLocation = location.resolve("queries-cep");
 		List<String> queries = getQueries(queryLocation, line.getOptionValue(QUERIES.getOpt()));
+		List<String> queriesCep = getQueries(queryCepLocation, line.getOptionValue(QUERIES_CEP.getOpt()));
 		System.out.println("Benchmark Queries: " + queries);
-		runQueries(queries, location);
+		runQueries(queries, queriesCep, location, queryCepLocation);
 	}
 
-	private static void runQueries(List<String> queries, Path location) {
+	private static void runQueries(List<String> queries, List<String> queriesCep, Path location, Path queryCepLocation) {
 		String flinkHome = System.getenv("FLINK_HOME");
 		if (flinkHome == null) {
 			throw new IllegalArgumentException("FLINK_HOME environment variable is not set.");
@@ -102,30 +106,30 @@ public class Benchmark {
 
 		// start to run queries
 		LinkedHashMap<String, JobBenchmarkMetric> totalMetrics = new LinkedHashMap<>();
-		for (String queryName : queries) {
-			Workload workload = workloadSuite.getQueryWorkload(queryName);
-			if (workload == null) {
-				throw new IllegalArgumentException(
-					String.format("The workload of query %s is not defined.", queryName));
-			}
-			workload.validateWorkload(monitorDuration);
-
-			MetricReporter reporter = new MetricReporter(
+		executeQueries(
+				queries,
+				workloadSuite,
 				flinkRestClient,
 				cpuMetricReceiver,
 				monitorDelay,
 				monitorInterval,
-				monitorDuration);
-			QueryRunner runner = new QueryRunner(
-				queryName,
-				workload,
+				monitorDuration,
 				location,
 				flinkDist,
-				reporter,
-				flinkRestClient);
-			JobBenchmarkMetric metric = runner.run();
-			totalMetrics.put(queryName, metric);
-		}
+				totalMetrics,
+				false);
+		executeQueries(
+				queriesCep,
+				workloadSuite,
+				flinkRestClient,
+				cpuMetricReceiver,
+				monitorDelay,
+				monitorInterval,
+				monitorDuration,
+				queryCepLocation,
+				flinkDist,
+				totalMetrics,
+				true);
 
 		// print benchmark summary
 		printSummary(totalMetrics);
@@ -169,6 +173,47 @@ public class Benchmark {
 			}
 		}
 		return queryList;
+	}
+
+	private static void executeQueries(
+			List<String> queries,
+			WorkloadSuite workloadSuite,
+			FlinkRestClient flinkRestClient,
+			CpuMetricReceiver cpuMetricReceiver,
+			Duration monitorDelay,
+			Duration monitorInterval,
+			Duration monitorDuration,
+			Path location,
+			Path flinkDist,
+			LinkedHashMap<String, JobBenchmarkMetric> totalMetrics,
+			boolean isQueryCep) {
+		for (String queryName : queries) {
+			Workload workload = workloadSuite.getQueryWorkload(queryName, isQueryCep);
+			if (workload == null) {
+				throw new IllegalArgumentException(
+						String.format("The workload of query %s is not defined.", queryName));
+			}
+			workload.validateWorkload(monitorDuration);
+
+			MetricReporter reporter =
+					new MetricReporter(
+							flinkRestClient,
+							cpuMetricReceiver,
+							monitorDelay,
+							monitorInterval,
+							monitorDuration);
+			QueryRunner runner =
+					new QueryRunner(
+							queryName,
+							workload,
+							location,
+							flinkDist,
+							reporter,
+							flinkRestClient,
+							isQueryCep);
+			JobBenchmarkMetric metric = runner.run();
+			totalMetrics.put(queryName, metric);
+		}
 	}
 
 	public static void printSummary(LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
@@ -268,6 +313,7 @@ public class Benchmark {
 	private static Options getOptions() {
 		Options options = new Options();
 		options.addOption(QUERIES);
+		options.addOption(QUERIES_CEP);
 		options.addOption(LOCATION);
 		return options;
 	}

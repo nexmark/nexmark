@@ -45,13 +45,17 @@ public class WorkloadSuiteTest {
 		conf.setString("nexmark.workload.suite.8m.tps", "8000000");
 		conf.setString("nexmark.workload.suite.8m.events.num", "80000000");
 		conf.setString("nexmark.workload.suite.8m.queries", "q0,q1,q2,q10,q12,q13,q14");
+		conf.setString("nexmark.workload.suite.8m.queries.cep", "q0");
 		conf.setString("nexmark.workload.suite.2m-no-bid.tps", "2000000");
 		conf.setString("nexmark.workload.suite.2m-no-bid.percentage", "bid:0, auction:9, person:1");
 		conf.setString("nexmark.workload.suite.2m-no-bid.queries", "q3,q8");
+		conf.setString("nexmark.workload.suite.2m-no-bid.queries.cep", "q1");
 		conf.setString("nexmark.workload.suite.2m.tps", "2000000");
 		conf.setString("nexmark.workload.suite.2m.queries", "q5,q15");
+		conf.setString("nexmark.workload.suite.2m.queries.cep", "q2");
 		conf.setString("nexmark.workload.suite.1m.tps", "1000000");
 		conf.setString("nexmark.workload.suite.1m.queries", "q4,q7,q9,q11");
+		conf.setString("nexmark.workload.suite.1m.queries.cep", "q3");
 		WorkloadSuite suite = WorkloadSuite.fromConf(conf);
 
 		Workload load8m = new Workload(8000000, 80000000, 1, 3, 46);
@@ -60,6 +64,7 @@ public class WorkloadSuiteTest {
 		Workload load1m = new Workload(1000000, 0, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
+		Map<String, Workload> queryCep2Workload = new HashMap<>();
 		query2Workload.put("q0", load8m);
 		query2Workload.put("q1", load8m);
 		query2Workload.put("q2", load8m);
@@ -79,9 +84,17 @@ public class WorkloadSuiteTest {
 		query2Workload.put("q11", load1m);
 		query2Workload.put("q15", load2m);
 
-		WorkloadSuite expected = new WorkloadSuite(query2Workload);
+		queryCep2Workload.put("q0", load8m);
 
-		assertEquals(expected, suite);
+		queryCep2Workload.put("q1", load2mNoBid);
+
+		queryCep2Workload.put("q2", load2m);
+
+		queryCep2Workload.put("q3", load1m);
+
+		WorkloadSuite expected = new WorkloadSuite(query2Workload, queryCep2Workload);
+
+		assertEquals(expected.toString(), suite.toString());
 	}
 
 	@Test
@@ -94,6 +107,7 @@ public class WorkloadSuiteTest {
 		Workload load = new Workload(10000000, 100000000, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
+		Map<String, Workload> queryCep2Workload = new HashMap<>();
 		query2Workload.put("q0", load);
 		query2Workload.put("q1", load);
 		query2Workload.put("q2", load);
@@ -116,11 +130,16 @@ public class WorkloadSuiteTest {
 		query2Workload.put("q20", load);
 		query2Workload.put("q21", load);
 		query2Workload.put("q22", load);
-		query2Workload.put("insert_kafka", new Workload(10000000, 1000000000, 1, 3, 46));
+		query2Workload.put("insert_kafka", new Workload(10000000, 0, 1, 3, 46));
+		queryCep2Workload.put("q0", load);
+		queryCep2Workload.put("q1", load);
+		queryCep2Workload.put("q2", load);
+		queryCep2Workload.put("q3", load);
+		queryCep2Workload.put("insert_kafka", new Workload(10000000, 0, 1, 3, 46));
 
-		WorkloadSuite expected = new WorkloadSuite(query2Workload);
+		WorkloadSuite expected = new WorkloadSuite(query2Workload, queryCep2Workload);
 
-		assertEquals(expected, suite);
+		assertEquals(expected.toString(), suite.toString());
 	}
 
 	@Test

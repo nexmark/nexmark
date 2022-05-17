@@ -18,7 +18,7 @@
 
 package com.github.nexmark.flink.model;
 
-import org.apache.flink.shaded.guava18.com.google.common.base.Objects;
+import org.apache.flink.shaded.guava30.com.google.common.base.Objects;
 
 import java.io.Serializable;
 import java.time.Instant;

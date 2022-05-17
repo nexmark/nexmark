@@ -25,6 +25,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/config.sh
 
 QUERY="all"
+QUERY_CEP="all"
 
 if [ $# -gt 0 ]
   then
@@ -34,4 +35,4 @@ fi
 log=$NEXMARK_LOG_DIR/nexmark-flink.log
 log_setting=(-Dlog.file="$log" -Dlog4j.configuration=file:"$NEXMARK_CONF_DIR"/log4j.properties -Dlog4j.configurationFile=file:"$NEXMARK_CONF_DIR"/log4j.properties)
 
-java "${log_setting[@]}" -cp "$NEXMARK_HOME/lib/*:$FLINK_HOME/lib/*" com.github.nexmark.flink.Benchmark --location "$NEXMARK_HOME" --queries "$QUERY"
+java "${log_setting[@]}" -cp "$NEXMARK_HOME/lib/*:$FLINK_HOME/lib/*" com.github.nexmark.flink.Benchmark --location "$NEXMARK_HOME" --queries "$QUERY" --queries-cep "$QUERY_CEP"

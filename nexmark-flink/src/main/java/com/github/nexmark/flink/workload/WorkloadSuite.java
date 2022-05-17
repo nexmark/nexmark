@@ -36,6 +36,7 @@ public class WorkloadSuite {
 
 	private static final String WORKLOAD_SUITE_CONF_PREFIX = "nexmark.workload.suite.";
 	private static final String QUERIES_CONF_SUFFIX = ".queries";
+	private static final String QUERIES_CEP_CONF_SUFFIX = ".queries.cep";
 	private static final String TPS_CONF_SUFFIX = ".tps";
 	private static final String EVENTS_NUM_CONF_SUFFIX = "." + NexmarkSourceOptions.EVENTS_NUM.key();
 	private static final String WARMUP_SUFFIX = ".warmup";
@@ -43,13 +44,15 @@ public class WorkloadSuite {
 	private static final String KAFKA_BOOTSTRAP_SERVERS = "kafka.bootstrap.servers";
 
 	private final Map<String, Workload> query2Workload;
+	private final Map<String, Workload> queryCep2Workload;
 
-	WorkloadSuite(Map<String, Workload> query2Workload) {
+	WorkloadSuite(Map<String, Workload> query2Workload, Map<String, Workload> queryCep2Workload) {
 		this.query2Workload = query2Workload;
+		this.queryCep2Workload = queryCep2Workload;
 	}
 
-	public Workload getQueryWorkload(String queryName) {
-		return query2Workload.get(queryName);
+	public Workload getQueryWorkload(String queryName, boolean isQueryCep) {
+		return isQueryCep ? queryCep2Workload.get(queryName) : query2Workload.get(queryName);
 	}
 
 	@Override
@@ -67,25 +70,38 @@ public class WorkloadSuite {
 
 	@Override
 	public String toString() {
-		return "WorkloadSuite{" +
-			"query2Workload=" + query2Workload +
-			'}';
+		return "WorkloadSuite{"
+				+ "query2Workload="
+				+ query2Workload
+				+ ", queryCep2Workload="
+				+ queryCep2Workload
+				+ '}';
 	}
 
 	public static WorkloadSuite fromConf(Configuration nexmarkConf) {
 		Map<String, String> confMap = nexmarkConf.toMap();
 		Set<String> suites = new HashSet<>();
 		String kafkaServers = confMap.getOrDefault(KAFKA_BOOTSTRAP_SERVERS, null);
-		confMap.keySet().forEach(k -> {
-			if (k.startsWith(WORKLOAD_SUITE_CONF_PREFIX) && k.endsWith(QUERIES_CONF_SUFFIX)) {
-				String suiteName = k.substring(
-						WORKLOAD_SUITE_CONF_PREFIX.length(),
-						k.length() - QUERIES_CONF_SUFFIX.length());
-				suites.add(suiteName);
-			}
-		});
+		confMap.keySet()
+				.forEach(
+						k -> {
+							if (k.startsWith(WORKLOAD_SUITE_CONF_PREFIX)
+									&& (k.endsWith(QUERIES_CONF_SUFFIX)
+									|| k.endsWith(QUERIES_CEP_CONF_SUFFIX))) {
+								String suiteName =
+										k.substring(
+												WORKLOAD_SUITE_CONF_PREFIX.length(),
+												k.length()
+														- (k.endsWith(QUERIES_CONF_SUFFIX)
+														? QUERIES_CONF_SUFFIX.length()
+														: QUERIES_CEP_CONF_SUFFIX
+														.length()));
+								suites.add(suiteName);
+							}
+						});
 
 		Map<String, Workload> query2Workload = new HashMap<>();
+		Map<String, Workload> queryCep2Workload = new HashMap<>();
 		for (String suiteName : suites) {
 			long tps = Long.parseLong(confMap.getOrDefault(
 					WORKLOAD_SUITE_CONF_PREFIX + suiteName + TPS_CONF_SUFFIX,
@@ -141,25 +157,14 @@ public class WorkloadSuite {
 			Workload load = new Workload(
 					tps, eventsNum, personProportion, auctionProportion, bidProportion, kafkaServers, warmupDuration.toMillis(), warmupTps, warmupEventsNum);
 
-			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + QUERIES_CONF_SUFFIX;
-			List<String> queries = new ArrayList<>();
-			if (confMap.containsKey(queriesKey)) {
-				String queriesString = removeQuotes(confMap.get(queriesKey));
-				for (String q : queriesString.split(",")) {
-					queries.add(q.trim());
-				}
-			}
+			String queriesSuite = WORKLOAD_SUITE_CONF_PREFIX + suiteName;
 
-			for (String q : queries) {
-				Workload old = query2Workload.put(q, load);
-				if (old != null) {
-					throw new IllegalArgumentException(
-						String.format("Query %s is defined in multiple suites.", q));
-				}
-			}
+			buildQueryToWorkload(confMap, queriesSuite + QUERIES_CONF_SUFFIX, load, query2Workload);
+			buildQueryToWorkload(
+					confMap, queriesSuite + QUERIES_CEP_CONF_SUFFIX, load, queryCep2Workload);
 		}
 
-		return new WorkloadSuite(query2Workload);
+		return new WorkloadSuite(query2Workload, queryCep2Workload);
 	}
 
 	private static String removeQuotes(String str) {
@@ -173,4 +178,25 @@ public class WorkloadSuite {
 		return result;
 	}
 
+	private static void buildQueryToWorkload(
+			Map<String, String> confMap,
+			String queriesKey,
+			Workload workload,
+			Map<String, Workload> query2Workload) {
+		List<String> queries = new ArrayList<>();
+		if (confMap.containsKey(queriesKey)) {
+			String queriesString = removeQuotes(confMap.get(queriesKey));
+			for (String q : queriesString.split(",")) {
+				queries.add(q.trim());
+			}
+		}
+
+		for (String q : queries) {
+			Workload old = query2Workload.put(q, workload);
+			if (old != null) {
+				throw new IllegalArgumentException(
+						String.format("Query %s is defined in multiple suites.", q));
+			}
+		}
+	}
 }
