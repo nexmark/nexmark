@@ -36,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
+
 public class QueryRunner {
 
 	private static final Logger LOG = LoggerFactory.getLogger(QueryRunner.class);
@@ -48,11 +50,12 @@ public class QueryRunner {
 	private final MetricReporter metricReporter;
 	private final FlinkRestClient flinkRestClient;
 
-	public QueryRunner(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient) {
+	public QueryRunner(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, String category) {
 		this.queryName = queryName;
 		this.workload = workload;
 		this.location = location;
-		this.queryLocation = location.resolve("queries");
+		this.queryLocation =
+				CATEGORY_OA.equals(category) ? location.resolve("queries") : location.resolve("queries-" + category);
 		this.flinkDist = flinkDist;
 		this.metricReporter = metricReporter;
 		this.flinkRestClient = flinkRestClient;

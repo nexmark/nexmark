@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
+
 public class WorkloadSuite {
 
 	private static final String WORKLOAD_SUITE_CONF_PREFIX = "nexmark.workload.suite.";
@@ -72,15 +74,16 @@ public class WorkloadSuite {
 			'}';
 	}
 
-	public static WorkloadSuite fromConf(Configuration nexmarkConf) {
+	public static WorkloadSuite fromConf(Configuration nexmarkConf, String category) {
 		Map<String, String> confMap = nexmarkConf.toMap();
 		Set<String> suites = new HashSet<>();
 		String kafkaServers = confMap.getOrDefault(KAFKA_BOOTSTRAP_SERVERS, null);
+		String categoryQueries = CATEGORY_OA.equals(category) ? QUERIES_CONF_SUFFIX : QUERIES_CONF_SUFFIX + "." + category;
 		confMap.keySet().forEach(k -> {
-			if (k.startsWith(WORKLOAD_SUITE_CONF_PREFIX) && k.endsWith(QUERIES_CONF_SUFFIX)) {
+			if (k.startsWith(WORKLOAD_SUITE_CONF_PREFIX) && k.endsWith(categoryQueries)) {
 				String suiteName = k.substring(
 						WORKLOAD_SUITE_CONF_PREFIX.length(),
-						k.length() - QUERIES_CONF_SUFFIX.length());
+						k.indexOf(QUERIES_CONF_SUFFIX));
 				suites.add(suiteName);
 			}
 		});
@@ -141,7 +144,7 @@ public class WorkloadSuite {
 			Workload load = new Workload(
 					tps, eventsNum, personProportion, auctionProportion, bidProportion, kafkaServers, warmupDuration.toMillis(), warmupTps, warmupEventsNum);
 
-			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + QUERIES_CONF_SUFFIX;
+			String queriesKey = WORKLOAD_SUITE_CONF_PREFIX + suiteName + categoryQueries;
 			List<String> queries = new ArrayList<>();
 			if (confMap.containsKey(queriesKey)) {
 				String queriesString = removeQuotes(confMap.get(queriesKey));

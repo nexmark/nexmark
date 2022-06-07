@@ -30,12 +30,11 @@ import org.junit.Test;
 
 public class NexmarkTableSourceITCase {
 
-	private StreamExecutionEnvironment env;
 	private StreamTableEnvironment tEnv;
 
 	@Before
 	public void before() {
-		env = StreamExecutionEnvironment.getExecutionEnvironment();
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		tEnv = StreamTableEnvironment.create(env);
 		env.setParallelism(4);
 		env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
@@ -220,6 +219,98 @@ public class NexmarkTableSourceITCase {
 				"    SPLIT_INDEX(url, '/', 3) as dir1,\n" +
 				"    SPLIT_INDEX(url, '/', 4) as dir2,\n" +
 				"    SPLIT_INDEX(url, '/', 5) as dir3 FROM bid"));
+	}
+
+	@Test
+	public void cepQ0() {
+		print(
+				tEnv.executeSql(
+						"SELECT\n"
+								+ "    auction, bidder, start_tstamp, bottom_tstamp, end_tstamp\n"
+								+ "FROM bid\n"
+								+ "MATCH_RECOGNIZE (\n"
+								+ "    PARTITION BY auction, bidder\n"
+								+ "    ORDER BY dateTime\n"
+								+ "    MEASURES\n"
+								+ "        START_ROW.dateTime AS start_tstamp,\n"
+								+ "        LAST(PRICE_DOWN.dateTime) AS bottom_tstamp,\n"
+								+ "        LAST(PRICE_UP.dateTime) AS end_tstamp\n"
+								+ "    ONE ROW PER MATCH\n"
+								+ "    AFTER MATCH SKIP TO LAST PRICE_UP\n"
+								+ "    PATTERN (START_ROW PRICE_DOWN+ PRICE_UP)\n"
+								+ "    DEFINE\n"
+								+ "        PRICE_DOWN AS\n"
+								+ "            (LAST(PRICE_DOWN.price, 1) IS NULL AND PRICE_DOWN.price < START_ROW.price) OR\n"
+								+ "                PRICE_DOWN.price < LAST(PRICE_DOWN.price, 1),\n"
+								+ "        PRICE_UP AS\n"
+								+ "            PRICE_UP.price > LAST(PRICE_DOWN.price, 1)\n"
+								+ ")"));
+	}
+
+	@Test
+	public void cepQ1() {
+		print(
+				tEnv.executeSql(
+						"SELECT\n"
+								+ "    auction, bidder, start_tstamp, end_tstamp, avg_price\n"
+								+ "FROM bid\n"
+								+ "MATCH_RECOGNIZE (\n"
+								+ "    PARTITION BY auction, bidder\n"
+								+ "    ORDER BY dateTime\n"
+								+ "    MEASURES\n"
+								+ "        FIRST(A.dateTime) AS start_tstamp,\n"
+								+ "        LAST(A.dateTime) AS end_tstamp,\n"
+								+ "        AVG(A.price) AS avg_price\n"
+								+ "    ONE ROW PER MATCH\n"
+								+ "    AFTER MATCH SKIP PAST LAST ROW\n"
+								+ "    PATTERN (A+ B)\n"
+								+ "    DEFINE\n"
+								+ "        A AS AVG(A.price) < 10000\n"
+								+ ")"));
+	}
+
+	@Test
+	public void cepQ2() {
+		print(
+				tEnv.executeSql(
+						"SELECT\n"
+								+ "    auction, bidder, start_tstamp, end_tstamp, avg_price\n"
+								+ "FROM bid\n"
+								+ "MATCH_RECOGNIZE (\n"
+								+ "    PARTITION BY auction, bidder\n"
+								+ "    ORDER BY dateTime\n"
+								+ "    MEASURES\n"
+								+ "        FIRST(A.dateTime) AS start_tstamp,\n"
+								+ "        LAST(A.dateTime) AS end_tstamp,\n"
+								+ "        AVG(A.price) AS avg_price\n"
+								+ "    ONE ROW PER MATCH\n"
+								+ "    AFTER MATCH SKIP TO NEXT ROW\n"
+								+ "    PATTERN (A+ B)\n"
+								+ "    DEFINE\n"
+								+ "        A AS AVG(A.price) < 10000\n"
+								+ ")"));
+	}
+
+	@Test
+	public void cepQ3() {
+		print(
+				tEnv.executeSql(
+						"SELECT\n"
+								+ "    auction, bidder, drop_time, drop_diff\n"
+								+ "FROM bid\n"
+								+ "MATCH_RECOGNIZE(\n"
+								+ "    PARTITION BY auction, bidder\n"
+								+ "    ORDER BY dateTime\n"
+								+ "    MEASURES\n"
+								+ "        C.dateTime AS drop_time,\n"
+								+ "        A.price - C.price AS drop_diff\n"
+								+ "    ONE ROW PER MATCH\n"
+								+ "    AFTER MATCH SKIP PAST LAST ROW\n"
+								+ "    PATTERN (A B* C) WITHIN INTERVAL '5' SECOND\n"
+								+ "    DEFINE\n"
+								+ "        B AS B.price > A.price - 50,\n"
+								+ "        C AS C.price < A.price - 50\n"
+								+ ")"));
 	}
 
 	private void print(TableResult result) {

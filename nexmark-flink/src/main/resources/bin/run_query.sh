@@ -17,21 +17,24 @@
 # limitations under the License.
 ################################################################################
 
-USAGE="Usage: run_query.sh (all|q0|q1|...)"
+USAGE="Usage: run_query.sh (oa|cep) (all|q0|q1|...)"
 
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
 . "$bin"/config.sh
 
+CATEGORY="oa"
 QUERY="all"
 
-if [ $# -gt 0 ]
-  then
+if [ $# -gt 1 ]; then
+    CATEGORY="$1"
+    QUERY="$2"
+elif [ $# -gt 0 ]; then
     QUERY="$1"
 fi
 
 log=$NEXMARK_LOG_DIR/nexmark-flink.log
 log_setting=(-Dlog.file="$log" -Dlog4j.configuration=file:"$NEXMARK_CONF_DIR"/log4j.properties -Dlog4j.configurationFile=file:"$NEXMARK_CONF_DIR"/log4j.properties)
 
-java "${log_setting[@]}" -cp "$NEXMARK_HOME/lib/*:$FLINK_HOME/lib/*" com.github.nexmark.flink.Benchmark --location "$NEXMARK_HOME" --queries "$QUERY"
+java "${log_setting[@]}" -cp "$NEXMARK_HOME/lib/*:$FLINK_HOME/lib/*" com.github.nexmark.flink.Benchmark --location "$NEXMARK_HOME" --queries "$QUERY" --category "$CATEGORY"
