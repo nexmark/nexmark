@@ -19,9 +19,7 @@
 package com.github.nexmark.flink;
 
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.util.Preconditions;
 
-import com.github.nexmark.flink.metric.BenchmarkMetric;
 import com.github.nexmark.flink.metric.FlinkRestClient;
 import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
@@ -59,29 +57,31 @@ public class Benchmark {
 	private static final Set<String> UNSUPPORTED_QUERIES = Collections.singleton("q6");
 
 	private static final Option LOCATION = new Option("l", "location", true,
-		"nexmark directory.");
+		"Nexmark directory.");
 	private static final Option QUERIES = new Option("q", "queries", true,
 		"Query to run. If the value is 'all', all queries will be run.");
-	private static final Option QUERIES_CEP = new Option("c", "queries-cep", true,
-			"Query CEP to run. If the value is 'all', all queries will be run.");
+	private static final Option CATEGORY = new Option("c", "category", true,
+			"Query category.");
+
+	public static final String CATEGORY_OA = "oa";
 
 	public static void main(String[] args) throws ParseException {
 		if (args == null || args.length == 0) {
-			throw new RuntimeException("Usage: --queries q1,q3 --queries-cep q1,q3 --location /path/to/nexmark");
+			throw new RuntimeException("Usage: --queries q1,q3 --category oa --location /path/to/nexmark");
 		}
 		Options options = getOptions();
 		DefaultParser parser = new DefaultParser();
 		CommandLine line = parser.parse(options, args, true);
 		Path location = new File(line.getOptionValue(LOCATION.getOpt())).toPath();
-		Path queryLocation = location.resolve("queries");
-		Path queryCepLocation = location.resolve("queries-cep");
-		List<String> queries = getQueries(queryLocation, line.getOptionValue(QUERIES.getOpt()));
-		List<String> queriesCep = getQueries(queryCepLocation, line.getOptionValue(QUERIES_CEP.getOpt()));
+		String category = CATEGORY.getValue(CATEGORY_OA).toLowerCase();
+		boolean isQueryOa = CATEGORY_OA.equals(category);
+		Path queryLocation = isQueryOa ? location.resolve("queries") : location.resolve("queries-" + category);
+		List<String> queries = getQueries(queryLocation, line.getOptionValue(QUERIES.getOpt()), isQueryOa);
 		System.out.println("Benchmark Queries: " + queries);
-		runQueries(queries, queriesCep, location, queryCepLocation);
+		runQueries(queries, location, category);
 	}
 
-	private static void runQueries(List<String> queries, List<String> queriesCep, Path location, Path queryCepLocation) {
+	private static void runQueries(List<String> queries, Path location, String category) {
 		String flinkHome = System.getenv("FLINK_HOME");
 		if (flinkHome == null) {
 			throw new IllegalArgumentException("FLINK_HOME environment variable is not set.");
@@ -102,7 +102,7 @@ public class Benchmark {
 		Duration monitorInterval = nexmarkConf.get(FlinkNexmarkOptions.METRIC_MONITOR_INTERVAL);
 		Duration monitorDuration = nexmarkConf.get(FlinkNexmarkOptions.METRIC_MONITOR_DURATION);
 
-		WorkloadSuite workloadSuite = WorkloadSuite.fromConf(nexmarkConf);
+		WorkloadSuite workloadSuite = WorkloadSuite.fromConf(nexmarkConf, category);
 
 		// start to run queries
 		LinkedHashMap<String, JobBenchmarkMetric> totalMetrics = new LinkedHashMap<>();
@@ -117,19 +117,7 @@ public class Benchmark {
 				location,
 				flinkDist,
 				totalMetrics,
-				false);
-		executeQueries(
-				queriesCep,
-				workloadSuite,
-				flinkRestClient,
-				cpuMetricReceiver,
-				monitorDelay,
-				monitorInterval,
-				monitorDuration,
-				queryCepLocation,
-				flinkDist,
-				totalMetrics,
-				true);
+				category);
 
 		// print benchmark summary
 		printSummary(totalMetrics);
@@ -141,7 +129,7 @@ public class Benchmark {
 	/**
 	 * Returns the mapping from query name to query file path.
 	 */
-	private static List<String> getQueries(Path queryLocation, String queries) {
+	private static List<String> getQueries(Path queryLocation, String queries, boolean isQueryOa) {
 		List<String> queryList = new ArrayList<>();
 		if (queries.equals("all")) {
 			File queriesDir = queryLocation.toFile();
@@ -151,7 +139,7 @@ public class Benchmark {
 			}
 			for (int i = 0; i < 100; i++) {
 				String queryName = "q" + i;
-				if (UNSUPPORTED_QUERIES.contains(queryName)) {
+				if (isQueryOa && UNSUPPORTED_QUERIES.contains(queryName)) {
 					continue;
 				}
 				File queryFile = new File(queryLocation.toFile(), queryName + ".sql");
@@ -161,7 +149,7 @@ public class Benchmark {
 			}
 		} else {
 			for (String queryName : queries.split(",")) {
-				if (UNSUPPORTED_QUERIES.contains(queryName)) {
+				if (isQueryOa && UNSUPPORTED_QUERIES.contains(queryName)) {
 					continue;
 				}
 				File queryFile = new File(queryLocation.toFile(), queryName + ".sql");
@@ -186,9 +174,9 @@ public class Benchmark {
 			Path location,
 			Path flinkDist,
 			LinkedHashMap<String, JobBenchmarkMetric> totalMetrics,
-			boolean isQueryCep) {
+			String category) {
 		for (String queryName : queries) {
-			Workload workload = workloadSuite.getQueryWorkload(queryName, isQueryCep);
+			Workload workload = workloadSuite.getQueryWorkload(queryName);
 			if (workload == null) {
 				throw new IllegalArgumentException(
 						String.format("The workload of query %s is not defined.", queryName));
@@ -210,7 +198,7 @@ public class Benchmark {
 							flinkDist,
 							reporter,
 							flinkRestClient,
-							isQueryCep);
+							category);
 			JobBenchmarkMetric metric = runner.run();
 			totalMetrics.put(queryName, metric);
 		}
@@ -313,7 +301,7 @@ public class Benchmark {
 	private static Options getOptions() {
 		Options options = new Options();
 		options.addOption(QUERIES);
-		options.addOption(QUERIES_CEP);
+		options.addOption(CATEGORY);
 		options.addOption(LOCATION);
 		return options;
 	}

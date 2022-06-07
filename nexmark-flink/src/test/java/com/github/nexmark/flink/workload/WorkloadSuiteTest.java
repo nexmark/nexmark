@@ -32,12 +32,15 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
 import static org.junit.Assert.assertEquals;
 
 public class WorkloadSuiteTest {
 
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
+
+	private static final String CATEGORY_CEP = "cep";
 
 	@Test
 	public void testCustomizedConf() {
@@ -56,7 +59,6 @@ public class WorkloadSuiteTest {
 		conf.setString("nexmark.workload.suite.1m.tps", "1000000");
 		conf.setString("nexmark.workload.suite.1m.queries", "q4,q7,q9,q11");
 		conf.setString("nexmark.workload.suite.1m.queries.cep", "q3");
-		WorkloadSuite suite = WorkloadSuite.fromConf(conf);
 
 		Workload load8m = new Workload(8000000, 80000000, 1, 3, 46);
 		Workload load2mNoBid = new Workload(2000000, 0, 1, 9, 0);
@@ -64,7 +66,6 @@ public class WorkloadSuiteTest {
 		Workload load1m = new Workload(1000000, 0, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
-		Map<String, Workload> queryCep2Workload = new HashMap<>();
 		query2Workload.put("q0", load8m);
 		query2Workload.put("q1", load8m);
 		query2Workload.put("q2", load8m);
@@ -84,17 +85,23 @@ public class WorkloadSuiteTest {
 		query2Workload.put("q11", load1m);
 		query2Workload.put("q15", load2m);
 
-		queryCep2Workload.put("q0", load8m);
+		WorkloadSuite expected = new WorkloadSuite(query2Workload);
 
-		queryCep2Workload.put("q1", load2mNoBid);
+		assertEquals(expected.toString(), WorkloadSuite.fromConf(conf, CATEGORY_OA).toString());
 
-		queryCep2Workload.put("q2", load2m);
+		query2Workload = new HashMap<>();
 
-		queryCep2Workload.put("q3", load1m);
+		query2Workload.put("q0", load8m);
 
-		WorkloadSuite expected = new WorkloadSuite(query2Workload, queryCep2Workload);
+		query2Workload.put("q1", load2mNoBid);
 
-		assertEquals(expected.toString(), suite.toString());
+		query2Workload.put("q2", load2m);
+
+		query2Workload.put("q3", load1m);
+
+		expected = new WorkloadSuite(query2Workload);
+
+		assertEquals(expected.toString(), WorkloadSuite.fromConf(conf, CATEGORY_CEP).toString());
 	}
 
 	@Test
@@ -102,12 +109,10 @@ public class WorkloadSuiteTest {
 		URL confDir = NexmarkGlobalConfigurationTest.class.getClassLoader().getResource("conf");
 		assert confDir != null;
 		Configuration conf = NexmarkGlobalConfiguration.loadConfiguration(confDir.getPath());
-		WorkloadSuite suite = WorkloadSuite.fromConf(conf);
 
 		Workload load = new Workload(10000000, 100000000, 1, 3, 46);
 
 		Map<String, Workload> query2Workload = new HashMap<>();
-		Map<String, Workload> queryCep2Workload = new HashMap<>();
 		query2Workload.put("q0", load);
 		query2Workload.put("q1", load);
 		query2Workload.put("q2", load);
@@ -131,15 +136,21 @@ public class WorkloadSuiteTest {
 		query2Workload.put("q21", load);
 		query2Workload.put("q22", load);
 		query2Workload.put("insert_kafka", new Workload(10000000, 0, 1, 3, 46));
-		queryCep2Workload.put("q0", load);
-		queryCep2Workload.put("q1", load);
-		queryCep2Workload.put("q2", load);
-		queryCep2Workload.put("q3", load);
-		queryCep2Workload.put("insert_kafka", new Workload(10000000, 0, 1, 3, 46));
 
-		WorkloadSuite expected = new WorkloadSuite(query2Workload, queryCep2Workload);
+		WorkloadSuite expected = new WorkloadSuite(query2Workload);
 
-		assertEquals(expected.toString(), suite.toString());
+		assertEquals(expected.toString(), WorkloadSuite.fromConf(conf, CATEGORY_OA).toString());
+
+		query2Workload = new HashMap<>();
+		query2Workload.put("q0", load);
+		query2Workload.put("q1", load);
+		query2Workload.put("q2", load);
+		query2Workload.put("q3", load);
+		query2Workload.put("insert_kafka", new Workload(10000000, 0, 1, 3, 46));
+
+		expected = new WorkloadSuite(query2Workload);
+
+		assertEquals(expected.toString(), WorkloadSuite.fromConf(conf, CATEGORY_CEP).toString());
 	}
 
 	@Test
