@@ -18,11 +18,11 @@
 
 package com.github.nexmark.flink.metric;
 
+import com.github.nexmark.flink.metric.tps.TpsMetric;
+import com.github.nexmark.flink.utils.NexmarkUtils;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ArrayNode;
-
-import com.github.nexmark.flink.utils.NexmarkUtils;
-import com.github.nexmark.flink.metric.tps.TpsMetric;
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -40,6 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -59,6 +61,8 @@ public class FlinkRestClient {
 
 	private final String jmEndpoint;
 	private final CloseableHttpClient httpClient;
+	private final Map<String, String> jobIds;
+	private volatile String lastJobId;
 
 	public FlinkRestClient(String jmAddress, int jmPort) {
 		this.jmEndpoint = jmAddress + ":" + jmPort;
@@ -77,6 +81,26 @@ public class FlinkRestClient {
 			.setConnectionManager(httpClientConnectionManager)
 			.setDefaultRequestConfig(requestConfig)
 			.build();
+
+		this.jobIds = new ConcurrentHashMap<>(50);
+		this.lastJobId = "";
+	}
+
+	public synchronized void updateAllJobStatus() {
+		String url = String.format("http://%s/jobs", jmEndpoint);
+		String response = executeAsString(url);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			JsonNode jobs = jsonNode.get("jobs");
+			for (JsonNode job : jobs) {
+				String id = job.get("id").asText();
+				if (jobIds.put(id, job.get("status").asText()) == null) {
+					lastJobId = id;
+				}
+			}
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
 	}
 
 	public void cancelJob(String jobId) {
@@ -86,32 +110,26 @@ public class FlinkRestClient {
 	}
 
 	public String getCurrentJobId() {
-		String url = String.format("http://%s/jobs", jmEndpoint);
-		String response = executeAsString(url);
-		try {
-			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
-			JsonNode jobs = jsonNode.get("jobs");
-			JsonNode job = jobs.get(0);
-			checkArgument(
-				job.get("status").asText().equals("RUNNING"),
-				"The first job is not running.");
-			return job.get("id").asText();
-		} catch (Exception e) {
-			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
-		}
+		updateAllJobStatus();
+		return lastJobId;
 	}
 
 	public boolean isJobRunning() {
-		String url = String.format("http://%s/jobs", jmEndpoint);
-		String response = executeAsString(url);
-		try {
-			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
-			JsonNode jobs = jsonNode.get("jobs");
-			JsonNode job = jobs.get(0);
-			return job.get("status").asText().equals("RUNNING");
-		} catch (Exception e) {
-			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		updateAllJobStatus();
+		return !isNullOrEmpty(lastJobId) && jobIds.get(lastJobId).equalsIgnoreCase("RUNNING");
+	}
+
+	public boolean isJobCancellingOrFinished() {
+		updateAllJobStatus();
+		if (!isNullOrEmpty(lastJobId)) {
+			String status = jobIds.get(lastJobId);
+			return status.equalsIgnoreCase("CANCELLING") || status.equalsIgnoreCase("CANCELED") || status.equalsIgnoreCase("FINISHED");
 		}
+		return true;
+	}
+
+	private static boolean isNullOrEmpty(String string) {
+		return string == null || string.length() == 0;
 	}
 
 	public String getSourceVertexId(String jobId) {

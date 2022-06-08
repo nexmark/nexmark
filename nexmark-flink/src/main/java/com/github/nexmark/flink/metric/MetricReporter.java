@@ -115,12 +115,8 @@ public class MetricReporter {
 		}
 	}
 
-	private boolean isJobRunning() {
-		return flinkRestClient.isJobRunning();
-	}
-
 	private void waitForOrJobFinish() {
-		while (isJobRunning()) {
+		while (flinkRestClient.isJobRunning()) {
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
