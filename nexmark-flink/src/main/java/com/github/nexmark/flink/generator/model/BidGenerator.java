@@ -25,6 +25,7 @@ import com.github.nexmark.flink.model.Bid;
 
 import java.time.Instant;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.github.nexmark.flink.generator.model.StringsGenerator.nextString;
 
@@ -52,7 +53,7 @@ public class BidGenerator {
             @Override
             public Tuple2<String, String> getNewInstance(Integer channelNumber) {
               String url = getBaseUrl();
-              if (new Random().nextInt(10) > 0) {
+              if (ThreadLocalRandom.current().nextInt(10) > 0) {
                 url = url + "&channel_id=" + Math.abs(Integer.reverse(channelNumber));
               }
               return new Tuple2<>("channel-" + channelNumber, url);
@@ -105,7 +106,7 @@ public class BidGenerator {
   }
 
   private static String getBaseUrl() {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     return "https://www.nexmark.com/" +
             nextString(random, 5, '_') + '/' +
             nextString(random, 5, '_') + '/' +
