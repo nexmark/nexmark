@@ -28,7 +28,7 @@ import com.github.nexmark.flink.generator.model.BidGenerator;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -101,8 +101,6 @@ public class NexmarkGenerator implements Iterator<TimestampedValue<Event>>, Seri
     }
   }
 
-  private final Random random;
-
   /**
    * Configuration to generate events against. Note that it may be replaced by a call to {@link
    * #splitAtEventId}.
@@ -120,8 +118,6 @@ public class NexmarkGenerator implements Iterator<TimestampedValue<Event>>, Seri
     this.config = config;
     this.eventsCountSoFar = eventsCountSoFar;
     this.wallclockBaseTime = wallclockBaseTime;
-    // random generator
-    this.random = new Random();
   }
 
   /** Create a fresh generator according to {@code config}. */
@@ -198,13 +194,13 @@ public class NexmarkGenerator implements Iterator<TimestampedValue<Event>>, Seri
     Event event;
     if (rem < config.personProportion) {
       event =
-          new Event(PersonGenerator.nextPerson(newEventId, random, adjustedEventTimestamp, config));
+          new Event(PersonGenerator.nextPerson(newEventId, ThreadLocalRandom.current(), adjustedEventTimestamp, config));
     } else if (rem < config.personProportion + config.auctionProportion) {
       event =
           new Event(
-              AuctionGenerator.nextAuction(eventsCountSoFar, newEventId, random, adjustedEventTimestamp, config));
+              AuctionGenerator.nextAuction(eventsCountSoFar, newEventId, ThreadLocalRandom.current(), adjustedEventTimestamp, config));
     } else {
-      event = new Event(BidGenerator.nextBid(newEventId, random, adjustedEventTimestamp, config));
+      event = new Event(BidGenerator.nextBid(newEventId, ThreadLocalRandom.current(), adjustedEventTimestamp, config));
     }
 
     eventsCountSoFar++;
