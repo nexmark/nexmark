@@ -43,7 +43,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * microseconds). The event stream is thus fully deterministic and does not depend on wallclock
  * time.
  */
-public class NexmarkGenerator implements Iterator<TimestampedValue<Event>>, Serializable {
+public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, Serializable {
 
   /**
    * The next event and its various timestamps. Ordered by increasing wallclock timestamp, then
@@ -212,9 +212,8 @@ public class NexmarkGenerator implements Iterator<TimestampedValue<Event>>, Seri
   }
 
   @Override
-  public TimestampedValue<Event> next() {
-    NextEvent next = nextEvent();
-    return new TimestampedValue<>(next.event, next.eventTimestamp);
+  public NexmarkGenerator.NextEvent next() {
+    return nextEvent();
   }
 
   @Override
