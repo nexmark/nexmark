@@ -18,10 +18,9 @@
 
 package com.github.nexmark.flink.model;
 
-import org.apache.flink.shaded.guava30.com.google.common.base.Objects;
-
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.Objects;
 
 /** An auction submitted by a person. */
 public class Auction implements Serializable {
@@ -105,18 +104,18 @@ public class Auction implements Serializable {
 		return id == auction.id
 			&& initialBid == auction.initialBid
 			&& reserve == auction.reserve
-			&& Objects.equal(dateTime, auction.dateTime)
-			&& Objects.equal(expires, auction.expires)
+			&& Objects.equals(dateTime, auction.dateTime)
+			&& Objects.equals(expires, auction.expires)
 			&& seller == auction.seller
 			&& category == auction.category
-			&& Objects.equal(itemName, auction.itemName)
-			&& Objects.equal(description, auction.description)
-			&& Objects.equal(extra, auction.extra);
+			&& Objects.equals(itemName, auction.itemName)
+			&& Objects.equals(description, auction.description)
+			&& Objects.equals(extra, auction.extra);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hashCode(
+		return Objects.hash(
 			id, itemName, description, initialBid, reserve, dateTime, expires, seller, category, extra);
 	}
 }
