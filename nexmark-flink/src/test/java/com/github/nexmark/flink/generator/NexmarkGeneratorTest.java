@@ -33,7 +33,7 @@ public class NexmarkGeneratorTest {
 		NexmarkGenerator generator = new NexmarkGenerator(generatorConfig);
 		int count = 0;
 		while (generator.hasNext()) {
-			Event event = generator.next().getValue();
+			Event event = generator.next().event;
 			count ++;
 			System.out.println(event);
 		}
