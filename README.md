@@ -140,7 +140,7 @@ Some notable configurations including:
 - Job parallelism: 8
 - Checkpoint enabled with exactly once mode and 3 minutes interval
 - Use RocksDB state backend with incremental checkpoint enabled
-- MiniBatch optimization enabled with 2 seconds interval and 5000 rows
+- MiniBatch optimization enabled with 2 seconds interval and 50000 rows
 - Splitting distinct aggregation optimization is enabled
 
 Flink version: 1.13.
