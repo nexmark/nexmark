@@ -103,3 +103,9 @@ akka.framesize: 102400kB
 web.timeout: 120000
 
 classloader.resolve-order: parent-first
+
+# configuration options for adjusting and tuning table programs.
+table.exec.mini-batch.enabled: true
+table.exec.mini-batch.allow-latency: 2s
+table.exec.mini-batch.size: 50000
+table.optimizer.distinct-agg.split.enabled: true
