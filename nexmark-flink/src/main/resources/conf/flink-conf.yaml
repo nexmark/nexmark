@@ -109,3 +109,6 @@ table.exec.mini-batch.enabled: true
 table.exec.mini-batch.allow-latency: 2s
 table.exec.mini-batch.size: 50000
 table.optimizer.distinct-agg.split.enabled: true
+
+# disable final checkpoint to avoid test waiting for the last checkpoint complete
+execution.checkpointing.checkpoints-after-tasks-finish.enabled: false
