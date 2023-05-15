@@ -100,7 +100,7 @@ Before start to run the benchmark, you should build the Nexmark benchmark first 
     - Set `state.checkpoints.dir` to your local file path (recommend to use SSD), e.g. `file:///home/username/checkpoint`.
     - Set `state.backend.rocksdb.localdir` to your local file path (recommend to use SSD), e.g. `/home/username/rocksdb`.
 - Step5: Configure Nexmark benchmark.
-  - Set Edit `nexmark/conf/nexmark.yaml` and set `nexmark.metric.reporter.host` to your master IP address.
+  - Edit `nexmark/conf/nexmark.yaml` and set `nexmark.metric.reporter.host` to your master IP address.
 - Step6: Copy `flink` and `nexmark` to your worker nodes using `scp`.
 - Step7: Start Flink Cluster by running `flink/bin/start-cluster.sh` on the master node.
 - Step8: Setup the benchmark cluster by running `nexmark/bin/setup_cluster.sh` on the master node.
