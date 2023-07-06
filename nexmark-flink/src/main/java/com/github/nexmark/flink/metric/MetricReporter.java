@@ -115,8 +115,14 @@ public class MetricReporter {
 		}
 	}
 
-	private void waitForOrJobFinish() {
-		while (flinkRestClient.isJobRunning()) {
+	private boolean isJobRunning() {
+		return flinkRestClient.isJobRunning();
+	}
+
+	private void waitForOrJobFinish(Duration duration) {
+		// The TPS drop to 0 which means job is finished or specific interval for tps mode
+		Deadline deadline = Deadline.fromNow(duration);
+		while (isJobRunning() && deadline.hasTimeLeft() && !jobIsFinished()) {
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
@@ -126,6 +132,23 @@ public class MetricReporter {
 				throw new RuntimeException(error);
 			}
 		}
+	}
+
+	private boolean jobIsFinished() {
+		if (metrics.size() <= 5) {
+			return false;
+		}
+		int lastPos = metrics.size() - 1;
+		BenchmarkMetric lastMetric = metrics.get(lastPos);
+		if (Double.compare(lastMetric.getTps(), 0.0) == 0) {
+			for (int i = 1;i < 5; i++) {
+				if (Double.compare(metrics.get(lastPos - i).getTps(), 0.0) != 0) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
 	}
 
 	public JobBenchmarkMetric reportMetric(String jobId, long eventsNum) {
@@ -138,11 +161,8 @@ public class MetricReporter {
 			System.out.println("Start to monitor metrics until job is finished.");
 		}
 		submitMonitorThread(jobId, eventsNum);
-		if (eventsNum == 0) {
-			waitFor(monitorDuration);
-		} else {
-			waitForOrJobFinish();
-		}
+		// monitorDuration is Long.MAX_VALUE in event number mode
+		waitForOrJobFinish(monitorDuration);
 
 		long endTime = System.currentTimeMillis();
 
@@ -154,14 +174,25 @@ public class MetricReporter {
 		}
 		double sumTps = 0.0;
 		double sumCpu = 0.0;
+		int realMetricSize = metrics.size();
 
-		for (BenchmarkMetric metric : metrics) {
+		// If the job finished, the tps will drop to 0, so we need to remove the effect of these metrics on the final result
+		for (int i = metrics.size() - 1; i >= 0; i--) {
+			if (Double.compare(metrics.get(i).getTps(), 0.0) != 0) {
+				break;
+			} else {
+				realMetricSize--;
+			}
+		}
+
+		List<BenchmarkMetric> realMetrics = metrics.subList(0, realMetricSize - 1);
+		for (BenchmarkMetric metric : realMetrics) {
 			sumTps += metric.getTps();
 			sumCpu += metric.getCpu();
 		}
 
-		double avgTps = sumTps / metrics.size();
-		double avgCpu = sumCpu / metrics.size();
+		double avgTps = sumTps / realMetricSize;
+		double avgCpu = sumCpu / realMetricSize;
 		JobBenchmarkMetric metric = new JobBenchmarkMetric(
 				avgTps, avgCpu, eventsNum, endTime - startTime);
 
@@ -176,7 +207,6 @@ public class MetricReporter {
 					metric.getPrettyCpu(),
 					formatDoubleValue(metric.getTimeSeconds()));
 		}
-
 		System.out.println(message);
 		LOG.info(message);
 		return metric;
@@ -213,7 +243,6 @@ public class MetricReporter {
 						String.format("Current Throughput=%s, Cores=%s (%s TMs)",
 								metric.getPrettyTps(), metric.getPrettyCpu(), tms) :
 						String.format("Current Cores=%s (%s TMs)", metric.getPrettyCpu(), tms);
-
 				System.out.println(message);
 				LOG.info(message);
 			} catch (Exception e) {

@@ -119,11 +119,6 @@ public class WorkloadSuite {
 				}
 			}
 
-			if (eventsNum > 0 && kafkaServers != null) {
-				throw new UnsupportedOperationException(
-						"Kafka source is endless, only supports tps mode (unlimited events.num) now");
-			}
-
 			Duration warmupDuration = TimeUtils.parseDuration(confMap.getOrDefault(
 					WORKLOAD_SUITE_CONF_PREFIX + suiteName + WARMUP_DURATION_SUFFIX,
 					"120s"));
@@ -135,11 +130,6 @@ public class WorkloadSuite {
 			long warmupEventsNum = Long.parseLong(confMap.getOrDefault(
 					WORKLOAD_SUITE_CONF_PREFIX + suiteName + WARMUP_SUFFIX + EVENTS_NUM_CONF_SUFFIX,
 					String.valueOf(eventsNum)));
-
-			if (warmupEventsNum > 0L && kafkaServers != null) {
-				throw new UnsupportedOperationException(
-						"Kafka source is endless, warmup only supports tps mode (unlimited warmup.events.num) now");
-			}
 
 			Workload load = new Workload(
 					tps, eventsNum, personProportion, auctionProportion, bidProportion, kafkaServers, warmupDuration.toMillis(), warmupTps, warmupEventsNum);
