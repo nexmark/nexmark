@@ -4,7 +4,7 @@
 -- Find the winning bid for each auction.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q9 (
   id  BIGINT,
   itemName  VARCHAR,
   description  VARCHAR,
@@ -24,7 +24,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q9
 SELECT
     id, itemName, description, initialBid, reserve, dateTime, expires, seller, category, extra,
     auction, bidder, price, bid_dateTime, bid_extra

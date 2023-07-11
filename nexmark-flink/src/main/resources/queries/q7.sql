@@ -8,7 +8,7 @@
 -- We will use a shorter window (10 seconds) to help make testing easier.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q7 (
   auction  BIGINT,
   bidder  BIGINT,
   price  BIGINT,
@@ -18,7 +18,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q7
 SELECT B.auction, B.price, B.bidder, B.dateTime, B.extra
 from bid B
 JOIN (

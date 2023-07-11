@@ -14,7 +14,7 @@ CREATE TABLE side_input (
   'format.type' = 'csv'
 );
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q13 (
   auction  BIGINT,
   bidder  BIGINT,
   price  BIGINT,
@@ -24,7 +24,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q13
 SELECT
     B.auction,
     B.bidder,

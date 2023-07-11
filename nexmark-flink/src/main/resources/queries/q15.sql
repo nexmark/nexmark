@@ -5,7 +5,7 @@
 -- Illustrates multiple distinct aggregations with filters.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q15 (
   `day` VARCHAR,
   total_bids BIGINT,
   rank1_bids BIGINT,
@@ -23,7 +23,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q15
 SELECT
      DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,
      count(*) AS total_bids,

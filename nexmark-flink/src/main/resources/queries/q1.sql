@@ -4,7 +4,7 @@
 -- Convert each bid value from dollars to euros. Illustrates a simple transformation.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q1 (
   auction  BIGINT,
   bidder  BIGINT,
   price  DECIMAL(23, 3),
@@ -14,7 +14,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q1
 SELECT
     auction,
     bidder,

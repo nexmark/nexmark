@@ -13,12 +13,12 @@
 -- To make it more interesting we instead choose bids for every 123'th auction.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q2 (
   auction  BIGINT,
   price  BIGINT
 ) WITH (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q2
 SELECT auction, price FROM bid WHERE MOD(auction, 123) = 0;
