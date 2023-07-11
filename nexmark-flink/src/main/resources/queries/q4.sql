@@ -5,14 +5,14 @@
 -- Illustrates complex join and aggregation.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q4 (
   id BIGINT,
   final BIGINT
 ) WITH (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q4
 SELECT
     Q.category,
     AVG(Q.final)

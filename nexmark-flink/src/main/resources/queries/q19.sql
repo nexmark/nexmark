@@ -5,7 +5,7 @@
 -- Illustrates a TOP-N query.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q19 (
     auction  BIGINT,
     bidder  BIGINT,
     price  BIGINT,
@@ -18,7 +18,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q19
 SELECT * FROM
 (SELECT *, ROW_NUMBER() OVER (PARTITION BY auction ORDER BY price DESC) AS rank_number FROM bid)
 WHERE rank_number <= 10;

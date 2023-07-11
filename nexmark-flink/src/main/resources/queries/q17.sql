@@ -5,7 +5,7 @@
 -- Illustrates an unbounded group aggregation.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q17 (
   auction BIGINT,
   `day` VARCHAR,
   total_bids BIGINT,
@@ -20,7 +20,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q17
 SELECT
      auction,
      DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,

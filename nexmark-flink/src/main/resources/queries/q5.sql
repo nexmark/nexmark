@@ -9,14 +9,14 @@
 -- i.e. in the last 10 seconds and update every 2 seconds.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q5 (
   auction  BIGINT,
   num  BIGINT
 ) WITH (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q5
 SELECT AuctionBids.auction, AuctionBids.num
  FROM (
    SELECT

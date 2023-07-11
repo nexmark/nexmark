@@ -5,7 +5,7 @@
 -- Illustrates an incremental join (using per-key state and timer) and filter.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q3 (
   name  VARCHAR,
   city  VARCHAR,
   state  VARCHAR,
@@ -14,7 +14,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q3
 SELECT
     P.name, P.city, P.state, A.id
 FROM

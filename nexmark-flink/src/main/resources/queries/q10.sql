@@ -6,7 +6,7 @@
 -- Every minute, save all events from the last period into partitioned log files.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE fs_sink (
+CREATE TABLE nexmark_q10 (
   auction  BIGINT,
   bidder  BIGINT,
   price  BIGINT,
@@ -26,6 +26,6 @@ CREATE TABLE fs_sink (
   'sink.rolling-policy.check-interval' = '1min'
 );
 
-INSERT INTO fs_sink
+INSERT INTO nexmark_q10
 SELECT auction, bidder, price, dateTime, extra, DATE_FORMAT(dateTime, 'yyyy-MM-dd'), DATE_FORMAT(dateTime, 'HH:mm')
 FROM bid;

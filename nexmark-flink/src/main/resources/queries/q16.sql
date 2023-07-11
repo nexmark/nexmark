@@ -5,7 +5,7 @@
 -- Illustrates multiple distinct aggregations with filters for multiple keys.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q16 (
     channel VARCHAR,
     `day` VARCHAR,
     `minute` VARCHAR,
@@ -25,7 +25,7 @@ CREATE TABLE discard_sink (
     'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q16
 SELECT
     channel,
     DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,

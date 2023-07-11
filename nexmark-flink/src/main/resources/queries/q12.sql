@@ -8,7 +8,7 @@
 -- Emit the count of bids per window.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q12 (
   bidder BIGINT,
   bid_count BIGINT,
   starttime TIMESTAMP(3),
@@ -19,7 +19,7 @@ CREATE TABLE discard_sink (
 
 CREATE VIEW B AS SELECT *, PROCTIME() as p_time FROM bid;
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q12
 SELECT
     bidder,
     count(*) as bid_count,

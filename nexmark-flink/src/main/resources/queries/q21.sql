@@ -5,7 +5,7 @@
 -- Illustrates a 'CASE WHEN' + 'REGEXP_EXTRACT' SQL.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q21 (
     auction  BIGINT,
     bidder  BIGINT,
     price  BIGINT,
@@ -15,7 +15,7 @@ CREATE TABLE discard_sink (
     'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q21
 SELECT
     auction, bidder, price, channel,
     CASE

@@ -5,7 +5,7 @@
 -- Illustrates a SPLIT_INDEX SQL.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q22 (
       auction  BIGINT,
       bidder  BIGINT,
       price  BIGINT,
@@ -17,7 +17,7 @@ CREATE TABLE discard_sink (
     'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q22
 SELECT
     auction, bidder, price, channel,
     SPLIT_INDEX(url, '/', 3) as dir1,

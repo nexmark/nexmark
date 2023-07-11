@@ -5,7 +5,7 @@
 -- Illustrates a Deduplicate query.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q18 (
     auction  BIGINT,
     bidder  BIGINT,
     price  BIGINT,
@@ -17,7 +17,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q18
 SELECT auction, bidder, price, channel, url, dateTime, extra
  FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY dateTime DESC) AS rank_number
        FROM bid)

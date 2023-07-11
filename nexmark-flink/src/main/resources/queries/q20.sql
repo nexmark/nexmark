@@ -27,7 +27,7 @@ CREATE TABLE discard_sink (
     'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q20
 SELECT
     auction, bidder, price, channel, url, B.dateTime, B.extra,
     itemName, description, initialBid, reserve, A.dateTime, expires, seller, category, A.extra

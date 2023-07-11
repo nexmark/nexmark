@@ -5,7 +5,7 @@
 -- Using `bid` events here, as they are most numerous with default configuration.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q0 (
   auction  BIGINT,
   bidder  BIGINT,
   price  BIGINT,
@@ -15,5 +15,5 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q0
 SELECT auction, bidder, price, dateTime, extra FROM bid;

@@ -7,7 +7,7 @@
 -- Emit the number of bids per session.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q11 (
   bidder BIGINT,
   bid_count BIGINT,
   starttime TIMESTAMP(3),
@@ -16,7 +16,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q11
 SELECT
     B.bidder,
     count(*) as bid_count,

@@ -7,7 +7,7 @@
 
 CREATE FUNCTION count_char AS 'com.github.nexmark.flink.udf.CountChar';
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q14 (
     auction BIGINT,
     bidder BIGINT,
     price  DECIMAL(23, 3),
@@ -19,7 +19,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q14
 SELECT 
     auction,
     bidder,

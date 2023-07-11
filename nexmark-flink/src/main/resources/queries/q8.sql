@@ -8,7 +8,7 @@
 -- To make things a bit more dynamic and easier to test we use much shorter windows (10 seconds).
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q8 (
   id  BIGINT,
   name  VARCHAR,
   stime  TIMESTAMP(3)
@@ -16,7 +16,7 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
-INSERT INTO discard_sink
+INSERT INTO nexmark_q8
 SELECT P.id, P.name, P.starttime
 FROM (
   SELECT id, name,
