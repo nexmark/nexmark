@@ -19,17 +19,19 @@ CREATE TABLE discard_sink (
 INSERT INTO discard_sink
 SELECT P.id, P.name, P.starttime
 FROM (
-  SELECT P.id, P.name,
-         TUMBLE_START(P.dateTime, INTERVAL '10' SECOND) AS starttime,
-         TUMBLE_END(P.dateTime, INTERVAL '10' SECOND) AS endtime
-  FROM person P
-  GROUP BY P.id, P.name, TUMBLE(P.dateTime, INTERVAL '10' SECOND)
+  SELECT id, name,
+        window_start AS starttime,
+        window_end AS endtime
+  FROM TABLE(
+            TUMBLE(TABLE person, DESCRIPTOR(dateTime), INTERVAL '10' SECOND))
+  GROUP BY id, name, window_start, window_end
 ) P
 JOIN (
-  SELECT A.seller,
-         TUMBLE_START(A.dateTime, INTERVAL '10' SECOND) AS starttime,
-         TUMBLE_END(A.dateTime, INTERVAL '10' SECOND) AS endtime
-  FROM auction A
-  GROUP BY A.seller, TUMBLE(A.dateTime, INTERVAL '10' SECOND)
+  SELECT seller,
+        window_start AS starttime,
+        window_end AS endtime
+  FROM TABLE(
+        TUMBLE(TABLE auction, DESCRIPTOR(dateTime), INTERVAL '10' SECOND))
+  GROUP BY seller, window_start, window_end
 ) A
 ON P.id = A.seller AND P.starttime = A.starttime AND P.endtime = A.endtime;
