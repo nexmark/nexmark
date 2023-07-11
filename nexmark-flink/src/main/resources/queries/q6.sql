@@ -17,11 +17,14 @@ CREATE TABLE discard_sink (
 INSERT INTO discard_sink
 SELECT
     Q.seller,
-    AVG(Q.final) OVER
+    AVG(Q.price) OVER
         (PARTITION BY Q.seller ORDER BY Q.dateTime ROWS BETWEEN 10 PRECEDING AND CURRENT ROW)
 FROM (
-    SELECT MAX(B.price) AS final, A.seller, B.dateTime
-    FROM auction AS A, bid AS B
-    WHERE A.id = B.auction and B.dateTime between A.dateTime and A.expires
-    GROUP BY A.id, A.seller
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY A.id, A.seller ORDER BY B.price DESC) AS rownum
+    FROM (SELECT A.id, A.seller, B.price, B.dateTime
+        FROM auction AS A,
+            bid AS B
+        WHERE A.id = B.auction
+            and B.dateTime between A.dateTime and A.expires)
+    WHERE rownum <= 1
 ) AS Q;

@@ -41,6 +41,6 @@ CREATE TABLE kafka (
     'properties.bootstrap.servers' = '${BOOTSTRAP_SERVERS}',
     'properties.group.id' = 'nexmark',
     'scan.startup.mode' = 'earliest-offset',
-    'sink.partitioner' = 'fixed',
+    'sink.partitioner' = 'round-robin',
     'format' = 'json'
 );

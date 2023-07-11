@@ -17,11 +17,14 @@ CREATE TABLE discard_sink (
   'connector' = 'blackhole'
 );
 
+CREATE VIEW B AS SELECT *, PROCTIME() as p_time FROM bid;
+
 INSERT INTO discard_sink
 SELECT
-    B.bidder,
+    bidder,
     count(*) as bid_count,
-    TUMBLE_START(B.p_time, INTERVAL '10' SECOND) as starttime,
-    TUMBLE_END(B.p_time, INTERVAL '10' SECOND) as endtime
-FROM (SELECT *, PROCTIME() as p_time FROM bid) B
-GROUP BY B.bidder, TUMBLE(B.p_time, INTERVAL '10' SECOND);
+    window_start AS starttime,
+    window_end AS endtime
+FROM TABLE(
+        TUMBLE(TABLE B, DESCRIPTOR(p_time), INTERVAL '10' SECOND))
+GROUP BY bidder, window_start, window_end;

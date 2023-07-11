@@ -22,9 +22,10 @@ INSERT INTO discard_sink
 SELECT B.auction, B.price, B.bidder, B.dateTime, B.extra
 from bid B
 JOIN (
-  SELECT MAX(B1.price) AS maxprice, TUMBLE_ROWTIME(B1.dateTime, INTERVAL '10' SECOND) as dateTime
-  FROM bid B1
-  GROUP BY TUMBLE(B1.dateTime, INTERVAL '10' SECOND)
+  SELECT MAX(price) AS maxprice, window_end as dateTime
+  FROM TABLE(
+          TUMBLE(TABLE bid, DESCRIPTOR(dateTime), INTERVAL '10' SECOND))
+  GROUP BY window_start, window_end
 ) B1
 ON B.price = B1.maxprice
 WHERE B.dateTime BETWEEN B1.dateTime  - INTERVAL '10' SECOND AND B1.dateTime;
