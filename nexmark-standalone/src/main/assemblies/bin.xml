@@ -26,7 +26,7 @@ under the License.
 	</formats>
 
 	<includeBaseDirectory>true</includeBaseDirectory>
-	<baseDirectory>nexmark-flink</baseDirectory>
+	<baseDirectory>nexmark-standalone</baseDirectory>
 
 	<files>
 		<!-- copy jars -->
@@ -39,18 +39,6 @@ under the License.
 
 	<fileSets>
 		<!-- copy start scripts -->
-		<fileSet>
-			<directory>src/main/resources/bin</directory>
-			<outputDirectory>bin</outputDirectory>
-			<fileMode>0755</fileMode>
-		</fileSet>
-
-		<fileSet>
-			<directory>src/main/resources/conf</directory>
-			<outputDirectory>conf</outputDirectory>
-			<fileMode>0755</fileMode>
-		</fileSet>
-
 		<fileSet>
 			<directory>./</directory>
 			<includes>
