@@ -37,7 +37,7 @@ public class FlinkNexmarkOptions {
 	public static final ConfigOption<Duration> METRIC_MONITOR_DURATION = ConfigOptions
 		.key("nexmark.metric.monitor.duration")
 		.durationType()
-		.defaultValue(Duration.ofMillis(Long.MAX_VALUE))
+		.defaultValue(Duration.ofNanos(Long.MAX_VALUE))
 		.withDescription("How long to monitor the metrics, default never end, " +
 			"monitor until job is finished.");
 
