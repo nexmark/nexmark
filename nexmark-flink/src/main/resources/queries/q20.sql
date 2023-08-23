@@ -5,7 +5,7 @@
 -- Illustrates a filter join.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE TABLE discard_sink (
+CREATE TABLE nexmark_q20 (
     auction  BIGINT,
     bidder  BIGINT,
     price  BIGINT,

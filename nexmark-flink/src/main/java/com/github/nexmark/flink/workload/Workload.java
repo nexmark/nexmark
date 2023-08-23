@@ -102,7 +102,7 @@ public class Workload {
 	}
 
 	public void validateWorkload(Duration monitorDuration) {
-		boolean unboundedMonitor = monitorDuration.toMillis() == Long.MAX_VALUE;
+		boolean unboundedMonitor = monitorDuration.toNanos() == Long.MAX_VALUE;
 		if (getEventsNum() == 0) {
 			// TPS mode
 			Preconditions.checkArgument(
