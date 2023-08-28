@@ -185,14 +185,14 @@ public class MetricReporter {
 			}
 		}
 
-		List<BenchmarkMetric> realMetrics = metrics.subList(0, realMetricSize - 1);
+		List<BenchmarkMetric> realMetrics = metrics.subList(0, realMetricSize);
 		for (BenchmarkMetric metric : realMetrics) {
 			sumTps += metric.getTps();
 			sumCpu += metric.getCpu();
 		}
 
-		double avgTps = sumTps / realMetricSize;
-		double avgCpu = sumCpu / realMetricSize;
+		double avgTps = sumTps / realMetrics.size();
+		double avgCpu = sumCpu / realMetrics.size();
 		JobBenchmarkMetric metric = new JobBenchmarkMetric(
 				avgTps, avgCpu, eventsNum, endTime - startTime);
 
