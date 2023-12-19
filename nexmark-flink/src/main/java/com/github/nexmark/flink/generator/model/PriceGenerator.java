@@ -17,13 +17,13 @@
  */
 package com.github.nexmark.flink.generator.model;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 /** Generates a random price. */
 public class PriceGenerator {
 
   /** Return a random price. */
-  public static long nextPrice(Random random) {
+  public static long nextPrice(SplittableRandom random) {
     return Math.round(Math.pow(10.0, random.nextDouble() * 6.0) * 100.0);
   }
 }

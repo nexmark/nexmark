@@ -17,13 +17,13 @@
  */
 package com.github.nexmark.flink.generator.model;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 /** LongGenerator. */
 public class LongGenerator {
 
   /** Return a random long from {@code [0, n)}. */
-  public static long nextLong(Random random, long n) {
+  public static long nextLong(SplittableRandom random, long n) {
     if (n < Integer.MAX_VALUE) {
       return random.nextInt((int) n);
     } else {

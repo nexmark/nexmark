@@ -21,7 +21,7 @@ import com.github.nexmark.flink.model.Auction;
 import com.github.nexmark.flink.generator.GeneratorConfig;
 
 import java.time.Instant;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 /** AuctionGenerator. */
 public class AuctionGenerator {
@@ -42,7 +42,7 @@ public class AuctionGenerator {
 
   /** Generate and return a random auction with next available id. */
   public static Auction nextAuction(
-      long eventsCountSoFar, long eventId, Random random, long timestamp, GeneratorConfig config) {
+          long eventsCountSoFar, long eventId, SplittableRandom random, long timestamp, GeneratorConfig config) {
 
     long id = lastBase0AuctionId(config, eventId) + GeneratorConfig.FIRST_AUCTION_ID;
 
@@ -101,7 +101,7 @@ public class AuctionGenerator {
   }
 
   /** Return a random auction id (base 0). */
-  public static long nextBase0AuctionId(long nextEventId, Random random, GeneratorConfig config) {
+  public static long nextBase0AuctionId(long nextEventId, SplittableRandom random, GeneratorConfig config) {
 
     // Choose a random auction for any of those which are likely to still be in flight,
     // plus a few 'leads'.
@@ -115,7 +115,7 @@ public class AuctionGenerator {
 
   /** Return a random time delay, in milliseconds, for length of auctions. */
   private static long nextAuctionLengthMs(
-      long eventsCountSoFar, Random random, long timestamp, GeneratorConfig config) {
+      long eventsCountSoFar, SplittableRandom random, long timestamp, GeneratorConfig config) {
 
     // What's our current event number?
     long currentEventNumber = config.nextAdjustedEventNumber(eventsCountSoFar);
