@@ -23,7 +23,7 @@ import com.github.nexmark.flink.generator.GeneratorConfig;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static com.github.nexmark.flink.generator.model.StringsGenerator.nextExtra;
 import static com.github.nexmark.flink.generator.model.StringsGenerator.nextString;
@@ -50,9 +50,11 @@ public class PersonGenerator {
   private static final List<String> LAST_NAMES =
       Arrays.asList("Shultz,Abrams,Spencer,White,Bartels,Walton,Smith,Jones,Noris".split(","));
 
+  private static final String[] CREDIT_CARD_STRINGS = createCreditCardStrings();
+
   /** Generate and return a random person with next available id. */
   public static Person nextPerson(
-      long nextEventId, Random random, long timestamp, GeneratorConfig config) {
+          long nextEventId, SplittableRandom random, long timestamp, GeneratorConfig config) {
 
     long id = lastBase0PersonId(config, nextEventId) + GeneratorConfig.FIRST_PERSON_ID;
     String name = nextPersonName(random);
@@ -67,7 +69,7 @@ public class PersonGenerator {
   }
 
   /** Return a random person id (base 0). */
-  public static long nextBase0PersonId(long eventId, Random random, GeneratorConfig config) {
+  public static long nextBase0PersonId(long eventId, SplittableRandom random, GeneratorConfig config) {
     // Choose a random person from any of the 'active' people, plus a few 'leads'.
     // By limiting to 'active' we ensure the density of bids or auctions per person
     // does not decrease over time for long running jobs.
@@ -96,35 +98,43 @@ public class PersonGenerator {
   }
 
   /** return a random US state. */
-  private static String nextUSState(Random random) {
+  private static String nextUSState(SplittableRandom random) {
     return US_STATES.get(random.nextInt(US_STATES.size()));
   }
 
   /** Return a random US city. */
-  private static String nextUSCity(Random random) {
+  private static String nextUSCity(SplittableRandom random) {
     return US_CITIES.get(random.nextInt(US_CITIES.size()));
   }
 
   /** Return a random person name. */
-  private static String nextPersonName(Random random) {
+  private static String nextPersonName(SplittableRandom random) {
     return FIRST_NAMES.get(random.nextInt(FIRST_NAMES.size()))
         + " "
         + LAST_NAMES.get(random.nextInt(LAST_NAMES.size()));
   }
 
   /** Return a random email address. */
-  private static String nextEmail(Random random) {
+  private static String nextEmail(SplittableRandom random) {
     return nextString(random, 7) + "@" + nextString(random, 5) + ".com";
   }
 
+  private static String[] createCreditCardStrings() {
+    String[] creditCardStrings = new String[10000];
+    for (int i = 0; i < creditCardStrings.length; ++i) {
+      creditCardStrings[i] = String.format("%04d", i);
+    }
+    return creditCardStrings;
+  }
+
   /** Return a random credit card number. */
-  private static String nextCreditCard(Random random) {
-    StringBuilder sb = new StringBuilder();
+  private static String nextCreditCard(SplittableRandom random) {
+    StringBuilder sb = new StringBuilder(20);
     for (int i = 0; i < 4; i++) {
       if (i > 0) {
         sb.append(' ');
       }
-      sb.append(String.format("%04d", random.nextInt(10000)));
+      sb.append(CREDIT_CARD_STRINGS[random.nextInt(CREDIT_CARD_STRINGS.length)]);
     }
     return sb.toString();
   }

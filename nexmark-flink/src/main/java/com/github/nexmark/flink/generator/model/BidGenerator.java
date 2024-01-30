@@ -17,14 +17,11 @@
  */
 package com.github.nexmark.flink.generator.model;
 
-import org.apache.flink.table.utils.ThreadLocalCache;
-
 import com.github.nexmark.flink.generator.GeneratorConfig;
 import com.github.nexmark.flink.model.Bid;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.SplittableRandom;
 import java.time.Instant;
-import java.util.Random;
 
 import static com.github.nexmark.flink.generator.model.StringsGenerator.nextString;
 
@@ -44,9 +41,10 @@ public class BidGenerator {
   private static final int CHANNELS_NUMBER = 10_000;
 
   private static final String[] HOT_CHANNELS = new String[] {"Google", "Facebook", "Baidu", "Apple"};
-  private static final String[] HOT_URLS = new String[] {getBaseUrl(), getBaseUrl(), getBaseUrl(), getBaseUrl()};
+  private static final SplittableRandom random = new SplittableRandom();
+  private static final String[] HOT_URLS = new String[] {getBaseUrl(random), getBaseUrl(random), getBaseUrl(random), getBaseUrl(random)};
 
-  private static final ConcurrentHashMap<Integer, Tuple2<String, String>> CHANNEL_URL_CACHE = new ConcurrentHashMap<Integer, Tuple2<String, String>>(CHANNELS_NUMBER);
+  private static final Tuple2<String, String>[] CHANNEL_URL_CACHE = createChannelUrlCache(random);
   
   private static class Tuple2<T1,T2> {
     public final T1 f0;
@@ -58,7 +56,7 @@ public class BidGenerator {
   }
 
   /** Generate and return a random bid with next available id. */
-  public static Bid nextBid(long eventId, Random random, long timestamp, GeneratorConfig config) {
+  public static Bid nextBid(long eventId, SplittableRandom random, long timestamp, GeneratorConfig config) {
 
     long auction;
     // Here P(bid will be for a hot auction) = 1 - 1/hotAuctionRatio.
@@ -90,7 +88,7 @@ public class BidGenerator {
       channel = HOT_CHANNELS[i];
       url = HOT_URLS[i];
     } else {
-      Tuple2<String, String> channelAndUrl = getNextChannelAndurl(random.nextInt(CHANNELS_NUMBER));
+      Tuple2<String, String> channelAndUrl = getNextChannelAndurl(random);
       channel = channelAndUrl.f0;
       url = channelAndUrl.f1;
     }
@@ -102,8 +100,7 @@ public class BidGenerator {
     return new Bid(auction, bidder, price, channel, url, Instant.ofEpochMilli(timestamp), extra);
   }
 
-  private static String getBaseUrl() {
-    Random random = new Random();
+  private static String getBaseUrl(SplittableRandom random) {
     return "https://www.nexmark.com/" +
             nextString(random, 5, '_') + '/' +
             nextString(random, 5, '_') + '/' +
@@ -111,17 +108,20 @@ public class BidGenerator {
             "item.htm?query=1";
   }
 
-  private static Tuple2<String, String> getNextChannelAndurl(int channelNumber){
-    Tuple2<String, String> previousValue = CHANNEL_URL_CACHE.get(channelNumber);
-    if(previousValue == null){
-      String url = getBaseUrl();
-      if (new Random().nextInt(10) > 0) {
-        url = url + "&channel_id=" + Math.abs(Integer.reverse(channelNumber));
+  private static Tuple2<String, String>[] createChannelUrlCache(SplittableRandom random) {
+    Tuple2<String, String>[] cache = new Tuple2[CHANNELS_NUMBER];
+    for (int i = 0; i < CHANNELS_NUMBER; ++i) {
+      String url = getBaseUrl(random);
+      if (random.nextInt(10) > 0) {
+        url = url + "&channel_id=" + Math.abs(Integer.reverse(i));
       }
-      
-      CHANNEL_URL_CACHE.putIfAbsent(channelNumber, new Tuple2<String, String>("channel-" + channelNumber, url));
+      cache[i] = new Tuple2<>("channel-" + i, url);
     }
+    return cache;
+  }
 
-    return CHANNEL_URL_CACHE.get(channelNumber);
+  private static Tuple2<String, String> getNextChannelAndurl(SplittableRandom random) {
+    int channelNumber = random.nextInt(CHANNELS_NUMBER);
+    return CHANNEL_URL_CACHE[channelNumber];
   }
 }

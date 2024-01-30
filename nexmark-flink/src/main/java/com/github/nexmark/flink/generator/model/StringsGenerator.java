@@ -17,7 +17,7 @@
  */
 package com.github.nexmark.flink.generator.model;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 /** Generates strings which are used for different field in other model objects. */
 public class StringsGenerator {
@@ -25,14 +25,16 @@ public class StringsGenerator {
   /** Smallest random string size. */
   private static final int MIN_STRING_LENGTH = 3;
 
+  private static final String REUSABLE_EXTRA_STRING = nextExactString(new SplittableRandom(), 1024 * 1024);
+
   /** Return a random string of up to {@code maxLength}. */
-  public static String nextString(Random random, int maxLength) {
+  public static String nextString(SplittableRandom random, int maxLength) {
     return nextString(random, maxLength, ' ');
   }
 
-  public static String nextString(Random random, int maxLength, char special) {
+  public static String nextString(SplittableRandom random, int maxLength, char special) {
     int len = MIN_STRING_LENGTH + random.nextInt(maxLength - MIN_STRING_LENGTH);
-    StringBuilder sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder(len);
     while (len-- > 0) {
       if (random.nextInt(13) == 0) {
         sb.append(special);
@@ -44,8 +46,13 @@ public class StringsGenerator {
   }
 
   /** Return a random string of exactly {@code length}. */
-  public static String nextExactString(Random random, int length) {
-    StringBuilder sb = new StringBuilder();
+  public static String nextExactString(SplittableRandom random, int length) {
+    if (REUSABLE_EXTRA_STRING != null && length < REUSABLE_EXTRA_STRING.length() / 2) {
+      int offset = random.nextInt(REUSABLE_EXTRA_STRING.length() - length);
+      return REUSABLE_EXTRA_STRING.substring(offset, offset + length);
+    }
+
+    StringBuilder sb = new StringBuilder(length);
     int rnd = 0;
     int n = 0; // number of random characters left in rnd
     while (length-- > 0) {
@@ -64,7 +71,7 @@ public class StringsGenerator {
    * Return a random {@code string} such that {@code currentSize + string.length()} is on average
    * {@code averageSize}.
    */
-  public static String nextExtra(Random random, int currentSize, int desiredAverageSize) {
+  public static String nextExtra(SplittableRandom random, int currentSize, int desiredAverageSize) {
     if (currentSize > desiredAverageSize) {
       return "";
     }

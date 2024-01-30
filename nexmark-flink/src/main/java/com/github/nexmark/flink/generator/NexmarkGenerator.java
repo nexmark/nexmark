@@ -17,8 +17,6 @@
  */
 package com.github.nexmark.flink.generator;
 
-import org.apache.flink.streaming.runtime.operators.windowing.TimestampedValue;
-
 import com.github.nexmark.flink.generator.model.AuctionGenerator;
 import com.github.nexmark.flink.generator.model.PersonGenerator;
 import com.github.nexmark.flink.model.Bid;
@@ -28,7 +26,7 @@ import com.github.nexmark.flink.generator.model.BidGenerator;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -101,7 +99,7 @@ public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, S
     }
   }
 
-  private final Random random;
+  private final SplittableRandom random = new SplittableRandom();
 
   /**
    * Configuration to generate events against. Note that it may be replaced by a call to {@link
@@ -120,8 +118,6 @@ public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, S
     this.config = config;
     this.eventsCountSoFar = eventsCountSoFar;
     this.wallclockBaseTime = wallclockBaseTime;
-    // random generator
-    this.random = new Random();
   }
 
   /** Create a fresh generator according to {@code config}. */
