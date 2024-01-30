@@ -38,7 +38,8 @@ env.java.opts.taskmanager: -Xloggc:$FLINK_LOG_DIR/taskmanager-gc.log -XX:+UseGCL
 #==============================================================================
 
 state.backend: rocksdb
-state.checkpoints.dir: file:///path/to/checkpoint # for example, hdfs://benchmark01/checkpoint
+# for example, hdfs://benchmark01/checkpoint
+state.checkpoints.dir: file:///path/to/checkpoint
 state.backend.rocksdb.localdir: /tmp
 state.backend.incremental: true
 execution.checkpointing.interval: 180000
