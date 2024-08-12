@@ -37,7 +37,9 @@ import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -209,29 +211,30 @@ public class Benchmark {
 			return;
 		}
 		System.err.println("-------------------------------- Nexmark Results --------------------------------");
-		int itemMaxLength = 20;
 		System.err.println();
 		if (totalMetrics.values().iterator().next().getEventsNum() != 0) {
-			printEventNumSummary(itemMaxLength, totalMetrics);
+			printEventNumSummary(totalMetrics);
 		} else {
-			printTPSSummary(itemMaxLength, totalMetrics);
+			printTPSSummary(totalMetrics);
 		}
 		System.err.println();
 	}
 
-	private static void printEventNumSummary(
-			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
-		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
-		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)", " Throughput/Cores");
-		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
+	private static void printEventNumSummary(LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
+		int[] itemMaxLength = {7, 18, 9, 11, 18, 15, 18};
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "", "");
+		printLine(' ', "|", itemMaxLength, " Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)", " Throughput ", " Throughput/Cores");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "", "");
 
 		long totalEventsNum = 0;
 		double totalCpus = 0;
 		double totalTimeSeconds = 0;
 		double totalCoresMultiplyTimeSeconds = 0;
+		double totalThroughput = 0;
 		double totalThroughputPerCore = 0;
 		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
 			JobBenchmarkMetric metric = entry.getValue();
+			double throughput = metric.getEventsNum() / metric.getTimeSeconds();
 			double throughputPerCore = metric.getEventsNum() / metric.getCoresMultiplyTimeSeconds();
 			printLine(' ', "|", itemMaxLength,
 					entry.getKey(),
@@ -239,11 +242,13 @@ public class Benchmark {
 					NUMBER_FORMAT.format(metric.getCpu()),
 					formatDoubleValue(metric.getTimeSeconds()),
 					formatDoubleValue(metric.getCoresMultiplyTimeSeconds()),
+					formatLongValuePerSecond((long) throughput),
 					formatLongValuePerSecond((long) throughputPerCore));
 			totalEventsNum += metric.getEventsNum();
 			totalCpus += metric.getCpu();
 			totalTimeSeconds += metric.getTimeSeconds();
 			totalCoresMultiplyTimeSeconds += metric.getCoresMultiplyTimeSeconds();
+			totalThroughput += throughput;
 			totalThroughputPerCore += throughputPerCore;
 		}
 		printLine(' ', "|", itemMaxLength,
@@ -252,14 +257,15 @@ public class Benchmark {
 				formatDoubleValue(totalCpus),
 				formatDoubleValue(totalTimeSeconds),
 				formatDoubleValue(totalCoresMultiplyTimeSeconds),
+				formatLongValuePerSecond((long) totalThroughput),
 				formatLongValuePerSecond((long) totalThroughputPerCore));
-		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "", "");
 	}
 
-	private static void printTPSSummary(
-			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
+	private static void printTPSSummary(LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
+		int[] itemMaxLength = {7, 18, 10, 18};
 		printLine('-', "+", itemMaxLength, "", "", "", "");
-		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Throughput (r/s)", " Cores", " Throughput/Cores");
+		printLine(' ', "|", itemMaxLength, " Query", " Throughput (r/s)", " Cores", " Throughput/Cores");
 		printLine('-', "+", itemMaxLength, "", "", "", "");
 
 		long totalTpsPerCore = 0;
@@ -283,13 +289,18 @@ public class Benchmark {
 	private static void printLine(
 		char charToFill,
 		String separator,
-		int itemMaxLength,
+		int[] itemMaxLength,
 		String... items) {
 		StringBuilder builder = new StringBuilder();
+		Iterator<Integer> lengthIterator = Arrays.stream(itemMaxLength).iterator();
+		int lineLength = 0;
 		for (String item : items) {
+			if (lengthIterator.hasNext()) {
+				lineLength = lengthIterator.next();
+			}
 			builder.append(separator);
 			builder.append(item);
-			int left = itemMaxLength - item.length() - separator.length();
+			int left = lineLength - item.length() - separator.length();
 			for (int i = 0; i < left; i++) {
 				builder.append(charToFill);
 			}
