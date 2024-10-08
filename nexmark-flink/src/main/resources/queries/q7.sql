@@ -19,7 +19,7 @@ CREATE TABLE nexmark_q7 (
 );
 
 INSERT INTO nexmark_q7
-SELECT B.auction, B.price, B.bidder, B.dateTime, B.extra
+SELECT B.auction, B.bidder, B.price, B.dateTime, B.extra
 from bid B
 JOIN (
   SELECT MAX(price) AS maxprice, window_end as dateTime
