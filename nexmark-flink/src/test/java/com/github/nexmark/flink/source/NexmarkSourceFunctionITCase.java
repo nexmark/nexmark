@@ -18,17 +18,21 @@
 
 package com.github.nexmark.flink.source;
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-
 import com.github.nexmark.flink.NexmarkConfiguration;
 import com.github.nexmark.flink.generator.GeneratorConfig;
-import com.github.nexmark.flink.model.Event;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.runtime.connector.source.ScanRuntimeProviderContext;
 import org.junit.Test;
+
+import static com.github.nexmark.flink.source.NexmarkTableSource.RESOLVED_SCHEMA;
 
 public class NexmarkSourceFunctionITCase {
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testDataStreamSource() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(4);
@@ -36,11 +40,13 @@ public class NexmarkSourceFunctionITCase {
 		nexmarkConfiguration.bidProportion = 46;
 		GeneratorConfig generatorConfig = new GeneratorConfig(
 			nexmarkConfiguration, System.currentTimeMillis(), 1, 100, 1);
-		env.addSource(new NexmarkSourceFunction<>(
-				generatorConfig,
-				(EventDeserializer<String>) Event::toString,
-				BasicTypeInfo.STRING_TYPE_INFO))
-			.print();
+		TypeInformation<RowData> typeInformation =
+				(TypeInformation<RowData>) ScanRuntimeProviderContext.INSTANCE
+						.createTypeInformation(RESOLVED_SCHEMA.toPhysicalRowDataType());
+		env.fromSource(new NexmarkSource(generatorConfig, typeInformation),
+				WatermarkStrategy.noWatermarks(),
+				"Source")
+				.print();
 
 		env.execute();
 	}

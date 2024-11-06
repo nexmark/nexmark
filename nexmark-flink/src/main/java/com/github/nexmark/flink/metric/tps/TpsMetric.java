@@ -20,6 +20,7 @@ package com.github.nexmark.flink.metric.tps;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
@@ -36,6 +37,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Response type for TPS aggregated metrics. Contains the metric name and optionally the sum, average, minimum and maximum.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TpsMetric {
 
 	private static final String FIELD_NAME_ID = "id";

@@ -18,17 +18,19 @@
 
 package com.github.nexmark.flink.source;
 
+import com.github.nexmark.flink.generator.GeneratorConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.Schema;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.connector.source.ScanTableSource;
-import org.apache.flink.table.connector.source.SourceFunctionProvider;
+import org.apache.flink.table.connector.source.SourceProvider;
 import org.apache.flink.table.data.RowData;
-
-import com.github.nexmark.flink.generator.GeneratorConfig;
+import org.apache.flink.table.types.DataType;
 
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.apache.flink.table.api.DataTypes.BIGINT;
 import static org.apache.flink.table.api.DataTypes.FIELD;
@@ -42,9 +44,9 @@ import static org.apache.flink.table.api.DataTypes.TIMESTAMP;
  */
 public class NexmarkTableSource implements ScanTableSource {
 
-	public static final TableSchema NEXMARK_SCHEMA = TableSchema.builder()
-		.field("event_type", INT())
-		.field("person", ROW(
+	public static final Schema NEXMARK_SCHEMA = Schema.newBuilder()
+		.column("event_type", INT())
+		.column("person", ROW(
 			FIELD("id", BIGINT()),
 			FIELD("name", STRING()),
 			FIELD("emailAddress", STRING()),
@@ -53,7 +55,7 @@ public class NexmarkTableSource implements ScanTableSource {
 			FIELD("state", STRING()),
 			FIELD("dateTime", TIMESTAMP(3)),
 			FIELD("extra", STRING())))
-		.field("auction", ROW(
+		.column("auction", ROW(
 			FIELD("id", BIGINT()),
 			FIELD("itemName", STRING()),
 			FIELD("description", STRING()),
@@ -64,7 +66,7 @@ public class NexmarkTableSource implements ScanTableSource {
 			FIELD("seller", BIGINT()),
 			FIELD("category", BIGINT()),
 			FIELD("extra", STRING())))
-		.field("bid", ROW(
+		.column("bid", ROW(
 			FIELD("auction", BIGINT()),
 			FIELD("bidder", BIGINT()),
 			FIELD("price", BIGINT()),
@@ -73,6 +75,14 @@ public class NexmarkTableSource implements ScanTableSource {
 			FIELD("dateTime", TIMESTAMP(3)),
 			FIELD("extra", STRING())))
 		.build();
+
+	public static final ResolvedSchema RESOLVED_SCHEMA = ResolvedSchema.physical(
+			NEXMARK_SCHEMA.getColumns().stream().map(Schema.UnresolvedColumn::getName).collect(Collectors.toList()),
+			NEXMARK_SCHEMA.getColumns().stream()
+					.map(unresolvedColumn ->
+							(DataType) ((Schema.UnresolvedPhysicalColumn) unresolvedColumn).getDataType())
+					.collect(Collectors.toList()));
+
 
 	private final GeneratorConfig config;
 
@@ -85,17 +95,11 @@ public class NexmarkTableSource implements ScanTableSource {
 		return ChangelogMode.insertOnly();
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public ScanRuntimeProvider getScanRuntimeProvider(ScanContext scanContext) {
-		// No type for be compatible for Flink 1.11 and 1.13
-		TypeInformation outputType = scanContext
-			.createTypeInformation(NEXMARK_SCHEMA.toPhysicalRowDataType());
-		NexmarkSourceFunction<RowData> sourceFunction = new NexmarkSourceFunction<>(
-			config,
-			new RowDataEventDeserializer(),
-			outputType);
-		return SourceFunctionProvider.of(sourceFunction, false);
+		TypeInformation<RowData> outputType = scanContext
+			.createTypeInformation(RESOLVED_SCHEMA.toPhysicalRowDataType());
+		return SourceProvider.of(new NexmarkSource(config, outputType));
 	}
 
 	@Override

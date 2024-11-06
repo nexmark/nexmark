@@ -32,10 +32,12 @@ import com.github.nexmark.flink.utils.NexmarkUtils;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.github.nexmark.flink.source.NexmarkTableSource.NEXMARK_SCHEMA;
+import static com.github.nexmark.flink.source.NexmarkTableSource.RESOLVED_SCHEMA;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -115,17 +117,18 @@ public class NexmarkTableSourceFactoryTest {
 	}
 
 	private static DynamicTableSource createTableSource(Map<String, String> options) {
-		return FactoryUtil.createTableSource(
+		return FactoryUtil.createDynamicTableSource(
 			null,
 			ObjectIdentifier.of("default", "default", "t1"),
 			new ResolvedCatalogTable(
-					CatalogTable.of(
-							NEXMARK_SCHEMA.toSchema(),
-							"mock source",
-							new ArrayList<>(),
-							options),
-					ResolvedSchema.physical(
-							NEXMARK_SCHEMA.getFieldNames(), NEXMARK_SCHEMA.getFieldDataTypes())),
+					CatalogTable.newBuilder()
+							.schema(NEXMARK_SCHEMA)
+							.comment("mock source")
+							.partitionKeys(new ArrayList<>())
+							.options(options)
+							.build(),
+					RESOLVED_SCHEMA),
+			Collections.emptyMap(),
 			new Configuration(),
 			NexmarkTableSourceFactoryTest.class.getClassLoader(),
 			false);
