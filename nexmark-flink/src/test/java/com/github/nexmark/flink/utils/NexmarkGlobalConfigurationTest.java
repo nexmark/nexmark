@@ -35,7 +35,7 @@ public class NexmarkGlobalConfigurationTest {
 		URL confDir = NexmarkGlobalConfigurationTest.class.getClassLoader().getResource("conf");
 		assert confDir != null;
 		Configuration conf = NexmarkGlobalConfiguration.loadConfiguration(confDir.getPath());
-		assertEquals(8081, conf.getInteger(FLINK_REST_PORT, -1));
-		assertEquals("localhost", conf.getString(FLINK_REST_ADDRESS, ""));
+		assertEquals((Integer) 8081, conf.get(FLINK_REST_PORT, -1));
+		assertEquals("localhost", conf.get(FLINK_REST_ADDRESS, ""));
 	}
 }

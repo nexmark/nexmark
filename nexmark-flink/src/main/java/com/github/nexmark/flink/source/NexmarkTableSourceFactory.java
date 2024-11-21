@@ -18,16 +18,14 @@
 
 package com.github.nexmark.flink.source;
 
+import com.github.nexmark.flink.NexmarkConfiguration;
+import com.github.nexmark.flink.generator.GeneratorConfig;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.ReadableConfig;
-import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
-
-import com.github.nexmark.flink.generator.GeneratorConfig;
-import com.github.nexmark.flink.NexmarkConfiguration;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -55,15 +53,6 @@ public class NexmarkTableSourceFactory implements DynamicTableSourceFactory {
 			1);
 
 		return new NexmarkTableSource(generatorConfig);
-	}
-
-	private void validateSchema(TableSchema schema) {
-		if (!schema.equals(NexmarkTableSource.NEXMARK_SCHEMA)) {
-			throw new IllegalArgumentException(
-				String.format("The nexmark source table must be in the schema of \n%s\n. However, It is \n%s\n",
-					NexmarkTableSource.NEXMARK_SCHEMA,
-					schema));
-		}
 	}
 
 	@Override

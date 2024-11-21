@@ -94,8 +94,7 @@ Before start to run the benchmark, you should build the Nexmark benchmark first 
 - Step3: Copy the jars under `nexmark/lib` to `flink/lib` which contains the Nexmark source generator.
 - Step4: Configure Flink.
   - Edit `flink/conf/workers` and enter the IP address of each worker node. Recommand to set 8 entries.
-  - Replace `flink/conf/sql-client-defaults.yaml` by `nexmark/conf/sql-client-defaults.yaml`
-  - Replace `flink/conf/flink-conf.yaml` by `nexmark/conf/flink-conf.yaml`. Remember to update the following configurations:
+  - Replace `flink/conf/config.yaml` by `nexmark/conf/config.yaml`. Remember to update the following configurations:
     - Set `jobmanager.rpc.address` to you master IP address
     - Set `state.checkpoints.dir` to your local file path (recommend to use SSD), e.g. `file:///home/username/checkpoint`.
     - Set `state.backend.rocksdb.localdir` to your local file path (recommend to use SSD), e.g. `/home/username/rocksdb`.
@@ -131,7 +130,7 @@ Minimum requirements:
 
 ### Flink Configuration
 
-Use the default configuration file `flink-conf.yaml` and `sql-client-defaults.yaml` defined in `nexmark-flink/src/main/resources/conf/`.
+Use the default configuration file `config.yaml` defined in `nexmark-flink/src/main/resources/conf/`.
 
 Some notable configurations including:
 
