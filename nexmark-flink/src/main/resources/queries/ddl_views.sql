@@ -6,7 +6,7 @@ SELECT
     person.creditCard,
     person.city,
     person.state,
-    dateTime,
+    customTime,
     person.extra
 FROM ${NEXMARK_TABLE} WHERE event_type = 0;
 
@@ -17,7 +17,7 @@ SELECT
     auction.description,
     auction.initialBid,
     auction.reserve,
-    dateTime,
+    customTime,
     auction.expires,
     auction.seller,
     auction.category,
@@ -31,6 +31,6 @@ SELECT
     bid.price,
     bid.channel,
     bid.url,
-    dateTime,
+    customTime,
     bid.extra
 FROM ${NEXMARK_TABLE} WHERE event_type = 2;
