@@ -25,7 +25,7 @@ CREATE TABLE nexmark_q15 (
 
 INSERT INTO nexmark_q15
 SELECT
-     DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,
+     DATE_FORMAT(`dateTime`, 'yyyy-MM-dd') as `day`,
      count(*) AS total_bids,
      count(*) filter (where price < 10000) AS rank1_bids,
      count(*) filter (where price >= 10000 and price < 1000000) AS rank2_bids,
@@ -39,4 +39,4 @@ SELECT
      count(distinct auction) filter (where price >= 10000 and price < 1000000) AS rank2_auctions,
      count(distinct auction) filter (where price >= 1000000) AS rank3_auctions
 FROM bid
-GROUP BY DATE_FORMAT(dateTime, 'yyyy-MM-dd');
+GROUP BY DATE_FORMAT(`dateTime`, 'yyyy-MM-dd');

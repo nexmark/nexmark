@@ -23,7 +23,7 @@ CREATE TABLE nexmark_q17 (
 INSERT INTO nexmark_q17
 SELECT
      auction,
-     DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,
+     DATE_FORMAT(`dateTime`, 'yyyy-MM-dd') as `day`,
      count(*) AS total_bids,
      count(*) filter (where price < 10000) AS rank1_bids,
      count(*) filter (where price >= 10000 and price < 1000000) AS rank2_bids,
@@ -33,4 +33,4 @@ SELECT
      avg(price) AS avg_price,
      sum(price) AS sum_price
 FROM bid
-GROUP BY auction, DATE_FORMAT(dateTime, 'yyyy-MM-dd');
+GROUP BY auction, DATE_FORMAT(`dateTime`, 'yyyy-MM-dd');

@@ -49,7 +49,7 @@ public class NexmarkTableSourceITCase {
 			"        creditCard  VARCHAR,\n" +
 			"        city  VARCHAR,\n" +
 			"        state  VARCHAR,\n" +
-			"        dateTime TIMESTAMP(3),\n" +
+			"        `dateTime` TIMESTAMP(3),\n" +
 			"        extra  VARCHAR>,\n" +
 			"    auction ROW<\n" +
 			"        id  BIGINT,\n" +
@@ -57,7 +57,7 @@ public class NexmarkTableSourceITCase {
 			"        description  VARCHAR,\n" +
 			"        initialBid  BIGINT,\n" +
 			"        reserve  BIGINT,\n" +
-			"        dateTime  TIMESTAMP(3),\n" +
+			"        `dateTime`  TIMESTAMP(3),\n" +
 			"        expires  TIMESTAMP(3),\n" +
 			"        seller  BIGINT,\n" +
 			"        category  BIGINT,\n" +
@@ -68,15 +68,15 @@ public class NexmarkTableSourceITCase {
 			"        price  BIGINT,\n" +
 			"        channel  VARCHAR,\n" +
 			"        url  VARCHAR,\n" +
-			"        dateTime  TIMESTAMP(3),\n" +
+			"        `dateTime`  TIMESTAMP(3),\n" +
 			"        extra  VARCHAR>,\n" +
-			"    dateTime AS\n" +
+			"    `dateTime` AS\n" +
 			"        CASE\n" +
-			"            WHEN event_type = 0 THEN person.dateTime\n" +
-			"            WHEN event_type = 1 THEN auction.dateTime\n" +
-			"            ELSE bid.dateTime\n" +
+			"            WHEN event_type = 0 THEN person.`dateTime`\n" +
+			"            WHEN event_type = 1 THEN auction.`dateTime`\n" +
+			"            ELSE bid.`dateTime`\n" +
 			"        END,\n" +
-			"    WATERMARK FOR dateTime AS dateTime - INTERVAL '4' SECOND" +
+			"    WATERMARK FOR `dateTime` AS `dateTime` - INTERVAL '4' SECOND" +
 			") WITH (\n" +
 			"    'connector' = 'nexmark',\n" +
 			"    'events.num' = '500'\n" +
@@ -88,7 +88,7 @@ public class NexmarkTableSourceITCase {
 				"    person.creditCard,\n" +
 				"    person.city,\n" +
 				"    person.state,\n" +
-				"    dateTime,\n" +
+				"    `dateTime`,\n" +
 				"    person.extra FROM nexmark AS t WHERE event_type = 0");
 		tEnv.executeSql("CREATE VIEW auction AS\n" +
 			"SELECT  auction.id,\n" +
@@ -96,7 +96,7 @@ public class NexmarkTableSourceITCase {
 				"    auction.description,\n" +
 				"    auction.initialBid,\n" +
 				"    auction.reserve,\n" +
-				"    dateTime,\n" +
+				"    `dateTime`,\n" +
 				"    auction.expires,\n" +
 				"    auction.seller,\n" +
 				"    auction.category,\n" +
@@ -107,7 +107,7 @@ public class NexmarkTableSourceITCase {
 				"    bid.price,\n" +
 				"    bid.channel,\n" +
 				"    bid.url,\n" +
-				"    dateTime,\n" +
+				"    `dateTime`,\n" +
 				"    bid.extra FROM nexmark AS t WHERE event_type = 2");
 	}
 
@@ -135,8 +135,8 @@ public class NexmarkTableSourceITCase {
 	public void q16() {
 		print(tEnv.executeSql("SELECT\n" +
 				"    channel,\n" +
-				"    DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,\n" +
-				"    max(DATE_FORMAT(dateTime, 'HH:mm')) as `minute`,\n" +
+				"    DATE_FORMAT(`dateTime`, 'yyyy-MM-dd') as `day`,\n" +
+				"    max(DATE_FORMAT(`dateTime`, 'HH:mm')) as `minute`,\n" +
 				"    count(*) AS total_bids,\n" +
 				"    count(*) filter (where price < 10000) AS rank1_bids,\n" +
 				"        count(*) filter (where price >= 10000 and price < 1000000) AS rank2_bids,\n" +
@@ -150,14 +150,14 @@ public class NexmarkTableSourceITCase {
 				"        count(distinct auction) filter (where price >= 10000 and price < 1000000) AS rank2_auctions,\n" +
 				"        count(distinct auction) filter (where price >= 1000000) AS rank3_auctions\n" +
 				"FROM bid\n" +
-				"GROUP BY channel, DATE_FORMAT(dateTime, 'yyyy-MM-dd')"));
+				"GROUP BY channel, DATE_FORMAT(`dateTime`, 'yyyy-MM-dd')"));
 	}
 
 	@Test
 	public void q17() {
 		print(tEnv.executeSql("SELECT\n" +
 				"     auction,\n" +
-				"     DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,\n" +
+				"     DATE_FORMAT(`dateTime`, 'yyyy-MM-dd') as `day`,\n" +
 				"     count(*) AS total_bids,\n" +
 				"     count(*) filter (where price < 10000) AS rank1_bids,\n" +
 				"     count(*) filter (where price >= 10000 and price < 1000000) AS rank2_bids,\n" +
@@ -167,13 +167,13 @@ public class NexmarkTableSourceITCase {
 				"     avg(price) AS avg_price,\n" +
 				"     sum(price) AS sum_price\n" +
 				"FROM bid\n" +
-				"GROUP BY auction, DATE_FORMAT(dateTime, 'yyyy-MM-dd')"));
+				"GROUP BY auction, DATE_FORMAT(`dateTime`, 'yyyy-MM-dd')"));
 	}
 
 	@Test
 	public void q18() {
-		print(tEnv.executeSql("SELECT auction, bidder, price, channel, url, dateTime, extra\n" +
-				" FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY dateTime DESC) AS rank_number\n" +
+		print(tEnv.executeSql("SELECT auction, bidder, price, channel, url, `dateTime`, extra\n" +
+				" FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY bidder, auction ORDER BY `dateTime` DESC) AS rank_number\n" +
 				"       FROM bid)\n" +
 				" WHERE rank_number <= 1"));
 	}
@@ -189,8 +189,8 @@ public class NexmarkTableSourceITCase {
 	public void q20() {
 		removeRowTime();
 		print(tEnv.executeSql("SELECT\n" +
-				"    auction, bidder, price, channel, url, B.dateTime, B.extra,\n" +
-				"    itemName, description, initialBid, reserve, A.dateTime, expires, seller, category, A.extra\n" +
+				"    auction, bidder, price, channel, url, B.`dateTime`, B.extra,\n" +
+				"    itemName, description, initialBid, reserve, A.`dateTime`, expires, seller, category, A.extra\n" +
 				"FROM\n" +
 				"    bid AS B INNER JOIN auction AS A on B.auction = A.id\n" +
 				"WHERE A.category = 10"));
@@ -230,11 +230,11 @@ public class NexmarkTableSourceITCase {
 								+ "FROM bid\n"
 								+ "MATCH_RECOGNIZE (\n"
 								+ "    PARTITION BY auction, bidder\n"
-								+ "    ORDER BY dateTime\n"
+								+ "    ORDER BY `dateTime`\n"
 								+ "    MEASURES\n"
-								+ "        START_ROW.dateTime AS start_tstamp,\n"
-								+ "        LAST(PRICE_DOWN.dateTime) AS bottom_tstamp,\n"
-								+ "        LAST(PRICE_UP.dateTime) AS end_tstamp\n"
+								+ "        START_ROW.`dateTime` AS start_tstamp,\n"
+								+ "        LAST(PRICE_DOWN.`dateTime`) AS bottom_tstamp,\n"
+								+ "        LAST(PRICE_UP.`dateTime`) AS end_tstamp\n"
 								+ "    ONE ROW PER MATCH\n"
 								+ "    AFTER MATCH SKIP TO LAST PRICE_UP\n"
 								+ "    PATTERN (START_ROW PRICE_DOWN+ PRICE_UP)\n"
@@ -256,10 +256,10 @@ public class NexmarkTableSourceITCase {
 								+ "FROM bid\n"
 								+ "MATCH_RECOGNIZE (\n"
 								+ "    PARTITION BY auction, bidder\n"
-								+ "    ORDER BY dateTime\n"
+								+ "    ORDER BY `dateTime`\n"
 								+ "    MEASURES\n"
-								+ "        FIRST(A.dateTime) AS start_tstamp,\n"
-								+ "        LAST(A.dateTime) AS end_tstamp,\n"
+								+ "        FIRST(A.`dateTime`) AS start_tstamp,\n"
+								+ "        LAST(A.`dateTime`) AS end_tstamp,\n"
 								+ "        AVG(A.price) AS avg_price\n"
 								+ "    ONE ROW PER MATCH\n"
 								+ "    AFTER MATCH SKIP PAST LAST ROW\n"
@@ -278,10 +278,10 @@ public class NexmarkTableSourceITCase {
 								+ "FROM bid\n"
 								+ "MATCH_RECOGNIZE (\n"
 								+ "    PARTITION BY auction, bidder\n"
-								+ "    ORDER BY dateTime\n"
+								+ "    ORDER BY `dateTime`\n"
 								+ "    MEASURES\n"
-								+ "        FIRST(A.dateTime) AS start_tstamp,\n"
-								+ "        LAST(A.dateTime) AS end_tstamp,\n"
+								+ "        FIRST(A.`dateTime`) AS start_tstamp,\n"
+								+ "        LAST(A.`dateTime`) AS end_tstamp,\n"
 								+ "        AVG(A.price) AS avg_price\n"
 								+ "    ONE ROW PER MATCH\n"
 								+ "    AFTER MATCH SKIP TO NEXT ROW\n"
@@ -300,9 +300,9 @@ public class NexmarkTableSourceITCase {
 								+ "FROM bid\n"
 								+ "MATCH_RECOGNIZE(\n"
 								+ "    PARTITION BY auction, bidder\n"
-								+ "    ORDER BY dateTime\n"
+								+ "    ORDER BY `dateTime`\n"
 								+ "    MEASURES\n"
-								+ "        C.dateTime AS drop_time,\n"
+								+ "        C.`dateTime` AS drop_time,\n"
 								+ "        A.price - C.price AS drop_diff\n"
 								+ "    ONE ROW PER MATCH\n"
 								+ "    AFTER MATCH SKIP PAST LAST ROW\n"

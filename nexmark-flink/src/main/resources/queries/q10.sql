@@ -10,7 +10,7 @@ CREATE TABLE nexmark_q10 (
   auction  BIGINT,
   bidder  BIGINT,
   price  BIGINT,
-  dateTime  TIMESTAMP(3),
+  `dateTime`  TIMESTAMP(3),
   extra  VARCHAR,
   dt STRING,
   hm STRING
@@ -27,5 +27,5 @@ CREATE TABLE nexmark_q10 (
 );
 
 INSERT INTO nexmark_q10
-SELECT auction, bidder, price, dateTime, extra, DATE_FORMAT(dateTime, 'yyyy-MM-dd'), DATE_FORMAT(dateTime, 'HH:mm')
+SELECT auction, bidder, price, `dateTime`, extra, DATE_FORMAT(`dateTime`, 'yyyy-MM-dd'), DATE_FORMAT(`dateTime`, 'HH:mm')
 FROM bid;

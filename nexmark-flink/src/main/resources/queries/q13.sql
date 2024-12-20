@@ -18,7 +18,7 @@ CREATE TABLE nexmark_q13 (
   auction  BIGINT,
   bidder  BIGINT,
   price  BIGINT,
-  dateTime  TIMESTAMP(3),
+  `dateTime`  TIMESTAMP(3),
   `value`  VARCHAR
 ) WITH (
   'connector' = 'blackhole'
@@ -29,7 +29,7 @@ SELECT
     B.auction,
     B.bidder,
     B.price,
-    B.dateTime,
+    B.`dateTime`,
     S.`value`
 FROM (SELECT *, PROCTIME() as p_time FROM bid) B
 JOIN side_input FOR SYSTEM_TIME AS OF B.p_time AS S

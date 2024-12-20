@@ -28,8 +28,8 @@ CREATE TABLE nexmark_q16 (
 INSERT INTO nexmark_q16
 SELECT
     channel,
-    DATE_FORMAT(dateTime, 'yyyy-MM-dd') as `day`,
-    max(DATE_FORMAT(dateTime, 'HH:mm')) as `minute`,
+    DATE_FORMAT(`dateTime`, 'yyyy-MM-dd') as `day`,
+    max(DATE_FORMAT(`dateTime`, 'HH:mm')) as `minute`,
     count(*) AS total_bids,
     count(*) filter (where price < 10000) AS rank1_bids,
     count(*) filter (where price >= 10000 and price < 1000000) AS rank2_bids,
@@ -43,4 +43,4 @@ SELECT
     count(distinct auction) filter (where price >= 10000 and price < 1000000) AS rank2_auctions,
     count(distinct auction) filter (where price >= 1000000) AS rank3_auctions
 FROM bid
-GROUP BY channel, DATE_FORMAT(dateTime, 'yyyy-MM-dd');
+GROUP BY channel, DATE_FORMAT(`dateTime`, 'yyyy-MM-dd');

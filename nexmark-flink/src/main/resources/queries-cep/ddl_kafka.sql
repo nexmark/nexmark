@@ -7,7 +7,7 @@ CREATE TABLE kafka (
         creditCard  VARCHAR,
         city  VARCHAR,
         state  VARCHAR,
-        dateTime TIMESTAMP(3),
+        `dateTime` TIMESTAMP(3),
         extra  VARCHAR>,
     auction ROW<
         id  BIGINT,
@@ -15,7 +15,7 @@ CREATE TABLE kafka (
         description  VARCHAR,
         initialBid  BIGINT,
         reserve  BIGINT,
-        dateTime  TIMESTAMP(3),
+        `dateTime`  TIMESTAMP(3),
         expires  TIMESTAMP(3),
         seller  BIGINT,
         category  BIGINT,
@@ -26,15 +26,15 @@ CREATE TABLE kafka (
         price  BIGINT,
         channel  VARCHAR,
         url  VARCHAR,
-        dateTime  TIMESTAMP(3),
+        `dateTime`  TIMESTAMP(3),
         extra  VARCHAR>,
-    dateTime AS
+    `dateTime` AS
         CASE
-            WHEN event_type = 0 THEN person.dateTime
-            WHEN event_type = 1 THEN auction.dateTime
-            ELSE bid.dateTime
+            WHEN event_type = 0 THEN person.`dateTime`
+            WHEN event_type = 1 THEN auction.`dateTime`
+            ELSE bid.`dateTime`
         END,
-    WATERMARK FOR dateTime AS dateTime - INTERVAL '4' SECOND
+    WATERMARK FOR `dateTime` AS `dateTime` - INTERVAL '4' SECOND
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'nexmark',
