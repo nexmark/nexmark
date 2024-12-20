@@ -21,10 +21,10 @@ SELECT
 FROM bid
 MATCH_RECOGNIZE(
     PARTITION BY auction, bidder
-    ORDER BY dateTime
+    ORDER BY `dateTime`
     MEASURES
-        FIRST(A.dateTime) AS start_tstamp,
-        LAST(A.dateTime) AS end_tstamp,
+        FIRST(A.`dateTime`) AS start_tstamp,
+        LAST(A.`dateTime`) AS end_tstamp,
         AVG(A.price) AS avg_price
     ONE ROW PER MATCH
     AFTER MATCH SKIP TO NEXT ROW

@@ -20,9 +20,9 @@ SELECT
 FROM bid
 MATCH_RECOGNIZE(
     PARTITION BY auction, bidder
-    ORDER BY dateTime
+    ORDER BY `dateTime`
     MEASURES
-        C.dateTime AS drop_time,
+        C.`dateTime` AS drop_time,
         A.price - C.price AS drop_diff
     ONE ROW PER MATCH
     AFTER MATCH SKIP PAST LAST ROW

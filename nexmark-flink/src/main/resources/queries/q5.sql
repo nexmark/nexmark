@@ -25,7 +25,7 @@ SELECT AuctionBids.auction, AuctionBids.num
      window_start AS starttime,
      window_end AS endtime
      FROM TABLE(
-             HOP(TABLE bid, DESCRIPTOR(dateTime), INTERVAL '2' SECOND, INTERVAL '10' SECOND))
+             HOP(TABLE bid, DESCRIPTOR(`dateTime`), INTERVAL '2' SECOND, INTERVAL '10' SECOND))
      GROUP BY auction, window_start, window_end
  ) AS AuctionBids
  JOIN (
@@ -39,7 +39,7 @@ SELECT AuctionBids.auction, AuctionBids.num
        window_start AS starttime,
        window_end AS endtime
      FROM TABLE(
-                HOP(TABLE bid, DESCRIPTOR(dateTime), INTERVAL '2' SECOND, INTERVAL '10' SECOND))
+                HOP(TABLE bid, DESCRIPTOR(`dateTime`), INTERVAL '2' SECOND, INTERVAL '10' SECOND))
      GROUP BY auction, window_start, window_end
      ) AS CountBids
    GROUP BY CountBids.starttime, CountBids.endtime

@@ -11,7 +11,7 @@ CREATE TABLE nexmark_q19 (
     price  BIGINT,
     channel  VARCHAR,
     url  VARCHAR,
-    dateTime  TIMESTAMP(3),
+    `dateTime`  TIMESTAMP(3),
     extra  VARCHAR,
     rank_number  BIGINT
 ) WITH (

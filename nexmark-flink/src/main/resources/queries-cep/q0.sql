@@ -21,11 +21,11 @@ SELECT
 FROM bid
 MATCH_RECOGNIZE (
     PARTITION BY auction, bidder
-    ORDER BY dateTime
+    ORDER BY `dateTime`
     MEASURES
-        START_ROW.dateTime AS start_tstamp,
-        LAST(PRICE_DOWN.dateTime) AS bottom_tstamp,
-        LAST(PRICE_UP.dateTime) AS end_tstamp
+        START_ROW.`dateTime` AS start_tstamp,
+        LAST(PRICE_DOWN.`dateTime`) AS bottom_tstamp,
+        LAST(PRICE_UP.`dateTime`) AS end_tstamp
     ONE ROW PER MATCH
     AFTER MATCH SKIP TO LAST PRICE_UP
     PATTERN (START_ROW PRICE_DOWN+ PRICE_UP)
