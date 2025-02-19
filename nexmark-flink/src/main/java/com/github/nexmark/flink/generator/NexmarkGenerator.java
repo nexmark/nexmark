@@ -102,8 +102,7 @@ public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, S
   private final SplittableRandom random = new SplittableRandom();
 
   /**
-   * Configuration to generate events against. Note that it may be replaced by a call to {@link
-   * #splitAtEventId}.
+   * Configuration to generate events against.
    */
   private GeneratorConfig config;
 
@@ -113,11 +112,15 @@ public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, S
   /** Wallclock time at which we emitted the first event (ms since epoch). Initially -1. */
   private long wallclockBaseTime;
 
+  /** The max events that the generator will generate. */
+  private long maxEvents;
+
   public NexmarkGenerator(GeneratorConfig config, long eventsCountSoFar, long wallclockBaseTime) {
     checkNotNull(config);
     this.config = config;
     this.eventsCountSoFar = eventsCountSoFar;
     this.wallclockBaseTime = wallclockBaseTime;
+    this.maxEvents = config.stopAtEvent < 0 ? config.maxEvents : Math.min(config.stopAtEvent, config.maxEvents);
   }
 
   /** Create a fresh generator according to {@code config}. */
@@ -132,27 +135,10 @@ public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, S
   }
 
   /**
-   * Return the current config for this generator. Note that configs may be replaced by {@link
-   * #splitAtEventId}.
+   * Return the current config for this generator.
    */
   public GeneratorConfig getCurrentConfig() {
     return config;
-  }
-
-  /**
-   * Mutate this generator so that it will only generate events up to but not including {@code
-   * eventId}. Return a config to represent the events this generator will no longer yield. The
-   * generators will run in on a serial timeline.
-   */
-  public GeneratorConfig splitAtEventId(long eventId) {
-    long newMaxEvents = eventId - (config.firstEventId + config.firstEventNumber);
-    GeneratorConfig remainConfig =
-        config.copyWith(
-            config.firstEventId,
-            config.maxEvents - newMaxEvents,
-            config.firstEventNumber + newMaxEvents);
-    config = config.copyWith(config.firstEventId, newMaxEvents, config.firstEventNumber);
-    return remainConfig;
   }
 
   /**
@@ -165,7 +151,7 @@ public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, S
 
   @Override
   public boolean hasNext() {
-    return eventsCountSoFar < config.maxEvents;
+    return eventsCountSoFar < maxEvents;
   }
 
   /**
@@ -227,6 +213,10 @@ public class NexmarkGenerator implements Iterator<NexmarkGenerator.NextEvent>, S
    */
   public long getEventsCountSoFar() {
     return eventsCountSoFar;
+  }
+
+  public long getWallclockBaseTime() {
+    return wallclockBaseTime;
   }
 
   @Override

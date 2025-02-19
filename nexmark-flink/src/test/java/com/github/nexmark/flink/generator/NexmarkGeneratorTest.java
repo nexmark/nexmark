@@ -29,7 +29,7 @@ public class NexmarkGeneratorTest {
 		NexmarkConfiguration nexmarkConfiguration = new NexmarkConfiguration();
 		nexmarkConfiguration.bidProportion = 46;
 		GeneratorConfig generatorConfig = new GeneratorConfig(
-			nexmarkConfiguration, System.currentTimeMillis(), 1, 100, 1);
+			nexmarkConfiguration, System.currentTimeMillis(), 1, 100, 0L, 1);
 		NexmarkGenerator generator = new NexmarkGenerator(generatorConfig);
 		int count = 0;
 		while (generator.hasNext()) {

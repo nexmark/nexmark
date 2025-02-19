@@ -56,6 +56,7 @@ public class NexmarkTableSourceFactoryTest {
 			System.currentTimeMillis(),
 			1,
 			0,
+			0L,
 			1
 		);
 		NexmarkTableSource expectedSource = new NexmarkTableSource(config);
@@ -104,6 +105,7 @@ public class NexmarkTableSourceFactoryTest {
 			System.currentTimeMillis(),
 			1,
 			nexmarkConf.numEvents,
+			0L,
 			1
 		);
 		NexmarkTableSource expectedSource = new NexmarkTableSource(config);
