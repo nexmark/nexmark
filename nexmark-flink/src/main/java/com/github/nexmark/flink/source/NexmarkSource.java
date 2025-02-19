@@ -84,9 +84,6 @@ public class NexmarkSource implements Source<RowData,
     public SplitEnumerator<NexmarkSourceSplit, Collection<NexmarkSourceSplit>> restoreEnumerator(
             SplitEnumeratorContext<NexmarkSourceSplit> splitEnumeratorContext,
             Collection<NexmarkSourceSplit> nexmarkSourceSplits) throws Exception {
-        if (nexmarkSourceSplits.size() != splitEnumeratorContext.currentParallelism()) {
-            throw new UnsupportedOperationException("We don't support rescale the source");
-        }
         return new StaticSplitEnumerator(splitEnumeratorContext, nexmarkSourceSplits);
     }
 
@@ -103,7 +100,7 @@ public class NexmarkSource implements Source<RowData,
     @Override
     public SourceReader<RowData, NexmarkSourceSplit> createReader(SourceReaderContext sourceReaderContext) {
         LOG.info("Creating Nexmark Reader");
-        return new NexmarkSourceReader(sourceReaderContext, deserializer);
+        return new NexmarkSourceReader(sourceReaderContext, config, deserializer);
     }
 
     @Override
@@ -180,6 +177,7 @@ public class NexmarkSource implements Source<RowData,
         private final String id;
         private final GeneratorConfig generatorConfig;
         private volatile long numEmittedSoFar;
+        private long wallClockBaseTime = -1L;
 
         NexmarkSourceSplit(String id, GeneratorConfig generatorConfig) {
             this.id = id;
@@ -200,8 +198,16 @@ public class NexmarkSource implements Source<RowData,
             return numEmittedSoFar;
         }
 
+        public long getWallClockBaseTime() {
+            return wallClockBaseTime;
+        }
+
         public void setNumEmittedSoFar(long numEmittedSoFar) {
             this.numEmittedSoFar = numEmittedSoFar;
+        }
+
+        public void setWallClockBaseTime(long wallClockBaseTime) {
+            this.wallClockBaseTime = wallClockBaseTime;
         }
     }
 
@@ -248,13 +254,13 @@ public class NexmarkSource implements Source<RowData,
 
         @Override
         public int getVersion() {
-            return 1;
+            return splitSerializer.getVersion();
         }
 
         @Override
         public byte[] serialize(Collection<NexmarkSourceSplit> splits) throws IOException {
             final ArrayList<byte[]> serializedSplits = new ArrayList<>(splits.size());
-            int totalLen = 4;
+            int totalLen = 8;
             for (NexmarkSourceSplit split : splits) {
                 final byte[] serSplit = splitSerializer.serialize(split);
                 serializedSplits.add(serSplit);
@@ -263,6 +269,7 @@ public class NexmarkSource implements Source<RowData,
 
             final byte[] result = new byte[totalLen];
             final ByteBuffer byteBuffer = ByteBuffer.wrap(result).order(ByteOrder.LITTLE_ENDIAN);
+            byteBuffer.putInt(getVersion());
             byteBuffer.putInt(splits.size());
             for (byte[] splitBytes : serializedSplits) {
                 byteBuffer.putInt(splitBytes.length);
@@ -277,7 +284,6 @@ public class NexmarkSource implements Source<RowData,
 
             final int splitSerializerVersion = bb.getInt();
             final int numSplits = bb.getInt();
-            final int numPaths = bb.getInt();
 
             final ArrayList<NexmarkSourceSplit> splits = new ArrayList<>(numSplits);
 

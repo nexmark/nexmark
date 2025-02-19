@@ -68,6 +68,9 @@ public class GeneratorConfig implements Serializable {
   /** Maximum number of events to generate. */
   public final long maxEvents;
 
+  /** The number of events that the generator should stop at. */
+  public final long stopAtEvent;
+
   /**
    * First event number. Generators running in parallel time may share the same event number, and
    * the event number is used to determine the event timestamp.
@@ -91,6 +94,7 @@ public class GeneratorConfig implements Serializable {
       long baseTime,
       long firstEventId,
       long maxEventsOrZero,
+      long stopAtEvent,
       long firstEventNumber) {
 
     this.auctionProportion = configuration.auctionProportion;
@@ -116,6 +120,7 @@ public class GeneratorConfig implements Serializable {
     } else {
       this.maxEvents = maxEventsOrZero;
     }
+    this.stopAtEvent = stopAtEvent;
     this.firstEventNumber = firstEventNumber;
 
     long eventsPerEpoch = 0;
@@ -124,11 +129,16 @@ public class GeneratorConfig implements Serializable {
     this.epochPeriodMs = epochPeriodMs;
   }
 
+  public GeneratorConfig reconfigure(GeneratorConfig configuration, boolean clearStopAtEvent) {
+    return new GeneratorConfig(
+        configuration.configuration, baseTime, firstEventId, maxEvents, clearStopAtEvent ? -1L : stopAtEvent, firstEventNumber);
+  }
+
   /** Return a copy of this config. */
   public GeneratorConfig copy() {
     GeneratorConfig result;
     result =
-        new GeneratorConfig(configuration, baseTime, firstEventId, maxEvents, firstEventNumber);
+        new GeneratorConfig(configuration, baseTime, firstEventId, maxEvents, stopAtEvent, firstEventNumber);
     return result;
   }
 
@@ -145,12 +155,14 @@ public class GeneratorConfig implements Serializable {
     } else {
       long subMaxEvents = maxEvents / n;
       long subFirstEventId = firstEventId;
+      long subValidEvents = stopAtEvent / n;
       for (int i = 0; i < n; i++) {
         if (i == n - 1) {
           // Don't loose any events to round-down.
           subMaxEvents = maxEvents - subMaxEvents * (n - 1);
+          subValidEvents = stopAtEvent - subValidEvents * (n - 1);
         }
-        results.add(copyWith(subFirstEventId, subMaxEvents, firstEventNumber));
+        results.add(copyWith(subFirstEventId, subMaxEvents, subValidEvents, firstEventNumber));
         subFirstEventId += subMaxEvents;
       }
     }
@@ -158,9 +170,9 @@ public class GeneratorConfig implements Serializable {
   }
 
   /** Return copy of this config except with given parameters. */
-  public GeneratorConfig copyWith(long firstEventId, long maxEvents, long firstEventNumber) {
+  public GeneratorConfig copyWith(long firstEventId, long maxEvents, long stopAtEvents, long firstEventNumber) {
     return new GeneratorConfig(
-            configuration, baseTime, firstEventId, maxEvents, firstEventNumber);
+            configuration, baseTime, firstEventId, maxEvents, stopAtEvents, firstEventNumber);
   }
 
   /** Return an estimate of the bytes needed by {@code numEvents}. */
@@ -264,6 +276,14 @@ public class GeneratorConfig implements Serializable {
    */
   public long timestampForEvent(long eventNumber) {
       return baseTime + (long)(eventNumber * interEventDelayUs[0]) / 1000L;
+  }
+
+  public boolean isSourceKeepAlive() {
+    return configuration.isSourceKeepAlive;
+  }
+
+  public boolean isSourceIgnoreStop() {
+    return stopAtEvent < 0;
   }
 
   @Override

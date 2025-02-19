@@ -18,6 +18,7 @@
 
 package com.github.nexmark.flink.source;
 
+import com.github.nexmark.flink.generator.GeneratorConfig;
 import com.github.nexmark.flink.generator.NexmarkGenerator;
 import org.apache.flink.api.connector.source.ReaderOutput;
 import org.apache.flink.api.connector.source.SourceReader;
@@ -36,18 +37,26 @@ public class NexmarkSourceReader implements SourceReader<RowData, NexmarkSource.
     private final SourceReaderContext context;
     private final EventDeserializer<RowData> deserializer;
     private final Counter numRecordsInCounter;
+    private final boolean isKeepAlive;
+    private final GeneratorConfig config;
     private NexmarkSource.NexmarkSourceSplit sourceSplit;
     private NexmarkGenerator generator;
 
-    NexmarkSourceReader(SourceReaderContext sourceReaderContext, EventDeserializer<RowData> deserializer) {
+    NexmarkSourceReader(SourceReaderContext sourceReaderContext,
+                        GeneratorConfig config,
+                        EventDeserializer<RowData> deserializer) {
         this.context = sourceReaderContext;
+        this.isKeepAlive = config.isSourceKeepAlive();
+        this.config = config;
         this.deserializer = deserializer;
         this.numRecordsInCounter = context.metricGroup().getIOMetricGroup().getNumRecordsInCounter();
     }
 
     @Override
     public void start() {
-        context.sendSplitRequest();
+        if (sourceSplit == null) {
+            context.sendSplitRequest();
+        }
     }
 
     @Override
@@ -56,7 +65,7 @@ public class NexmarkSourceReader implements SourceReader<RowData, NexmarkSource.
             return InputStatus.NOTHING_AVAILABLE;
         }
         if (!generator.hasNext()) {
-            return InputStatus.END_OF_INPUT;
+            return isKeepAlive ? InputStatus.NOTHING_AVAILABLE : InputStatus.END_OF_INPUT;
         }
         long now = System.currentTimeMillis();
         NexmarkGenerator.NextEvent nextEvent = generator.next();
@@ -65,12 +74,13 @@ public class NexmarkSourceReader implements SourceReader<RowData, NexmarkSource.
         }
         readerOutput.collect(deserializer.deserialize(nextEvent.event));
         numRecordsInCounter.inc();
-        sourceSplit.setNumEmittedSoFar(generator.getEventsCountSoFar());
         return InputStatus.MORE_AVAILABLE;
     }
 
     @Override
     public List<NexmarkSource.NexmarkSourceSplit> snapshotState(long l) {
+        sourceSplit.setNumEmittedSoFar(generator.getEventsCountSoFar());
+        sourceSplit.setWallClockBaseTime(generator.getWallclockBaseTime());
         return Collections.singletonList(sourceSplit);
     }
 
@@ -84,7 +94,7 @@ public class NexmarkSourceReader implements SourceReader<RowData, NexmarkSource.
         Preconditions.checkState(list.size() == 1, "Only one split supported for one reader");
         Preconditions.checkState(sourceSplit == null, "We already have one split.");
         sourceSplit = list.get(0);
-        generator = new NexmarkGenerator(sourceSplit.getGeneratorConfig(), sourceSplit.getNumEmittedSoFar(), -1);
+        generator = new NexmarkGenerator(sourceSplit.getGeneratorConfig().reconfigure(config, config.isSourceIgnoreStop()), sourceSplit.getNumEmittedSoFar(), sourceSplit.getWallClockBaseTime());
     }
 
     @Override

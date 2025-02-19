@@ -135,6 +135,16 @@ public class NexmarkConfiguration implements Serializable {
 	 */
 	@JsonProperty public long outOfOrderGroupSize = 1;
 
+	/**
+	 * If true, the source will not finish and quit if all the events emit.
+	 */
+	@JsonProperty public boolean isSourceKeepAlive = false;
+
+	/**
+	 * The source will finish at number of event if it is not -1.
+	 */
+	@JsonProperty public long stopAtEvent = -1L;
+
 	/** Return full description as a string. */
 	@Override
 	public String toString() {
@@ -177,7 +187,9 @@ public class NexmarkConfiguration implements Serializable {
 			Double.compare(that.probDelayedEvent, probDelayedEvent) == 0 &&
 			outOfOrderGroupSize == that.outOfOrderGroupSize &&
 			rateShape == that.rateShape &&
-			rateUnit == that.rateUnit;
+			rateUnit == that.rateUnit &&
+			isSourceKeepAlive == that.isSourceKeepAlive &&
+			stopAtEvent == that.stopAtEvent;
 	}
 
 	@Override
@@ -210,6 +222,8 @@ public class NexmarkConfiguration implements Serializable {
 			numActivePeople,
 			occasionalDelaySec,
 			probDelayedEvent,
-			outOfOrderGroupSize);
+			outOfOrderGroupSize,
+			isSourceKeepAlive,
+			stopAtEvent);
 	}
 }
