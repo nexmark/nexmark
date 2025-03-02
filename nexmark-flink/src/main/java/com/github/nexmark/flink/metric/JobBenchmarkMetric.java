@@ -28,16 +28,18 @@ public class JobBenchmarkMetric {
 	private final double cpu;
 	private final long eventsNum;
 	private final long timeMills;
+	private final long jobInitializedTimeMills;
 
 	public JobBenchmarkMetric(double tps, double cpu) {
-		this(tps, cpu, 0, 0);
+		this(tps, cpu, 0, 0, 0);
 	}
 
-	public JobBenchmarkMetric(double tps, double cpu, long eventsNum, long timeMills) {
+	public JobBenchmarkMetric(double tps, double cpu, long eventsNum, long timeMills, long jobInitializedTimeMills) {
 		this.tps = tps;
 		this.eventsNum = eventsNum;
 		this.cpu = cpu;
 		this.timeMills = timeMills;
+		this.jobInitializedTimeMills = jobInitializedTimeMills;
 	}
 
 	public String getPrettyTps() {
@@ -50,6 +52,10 @@ public class JobBenchmarkMetric {
 
 	public double getTimeSeconds() {
 		return timeMills / 1000D;
+	}
+
+	public double getJobInitializedTimeSeconds() {
+		return jobInitializedTimeMills / 1000D;
 	}
 
 	public String getPrettyCpu() {
