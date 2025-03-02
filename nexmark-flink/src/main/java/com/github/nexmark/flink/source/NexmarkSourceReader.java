@@ -69,7 +69,7 @@ public class NexmarkSourceReader implements SourceReader<RowData, NexmarkSource.
         }
         long now = System.currentTimeMillis();
         NexmarkGenerator.NextEvent nextEvent = generator.next();
-        if (nextEvent.wallclockTimestamp > now) {
+        if (!config.maxEmitSpeed && nextEvent.wallclockTimestamp > now) {
             Thread.sleep(nextEvent.wallclockTimestamp - now);
         }
         readerOutput.collect(deserializer.deserialize(nextEvent.event));

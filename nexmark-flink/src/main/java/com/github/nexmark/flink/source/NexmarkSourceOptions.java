@@ -166,7 +166,13 @@ public class NexmarkSourceOptions {
 			.longType()
 			.defaultValue(-1L);
 
-
+	/**
+	 * @see NexmarkConfiguration#maxEmitSpeed
+	 */
+	public static final ConfigOption<Boolean> MAX_EMIT_SPEED = ConfigOptions
+			.key("max-emit-speed")
+			.booleanType()
+			.defaultValue(true);
 
 	public static NexmarkConfiguration convertToNexmarkConfiguration(ReadableConfig config) {
 		NexmarkConfiguration nexmarkConf = new NexmarkConfiguration();
@@ -187,6 +193,7 @@ public class NexmarkSourceOptions {
 		nexmarkConf.numEvents = config.get(EVENTS_NUM);
 		nexmarkConf.isSourceKeepAlive = config.get(KEEP_ALIVE);
 		nexmarkConf.stopAtEvent = config.get(STOP_AT);
+		nexmarkConf.maxEmitSpeed = config.get(MAX_EMIT_SPEED);
 
 		return nexmarkConf;
 	}

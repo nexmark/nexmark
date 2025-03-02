@@ -89,6 +89,12 @@ public class GeneratorConfig implements Serializable {
    */
   private final long eventsPerEpoch;
 
+  /**
+   * Whether to emit record at max speed, or to respect the inter-event delay. This is useful for
+   * testing the system under load.
+   */
+  public final boolean maxEmitSpeed;
+
   public GeneratorConfig(
       NexmarkConfiguration configuration,
       long baseTime,
@@ -127,6 +133,8 @@ public class GeneratorConfig implements Serializable {
     long epochPeriodMs = 0;
     this.eventsPerEpoch = eventsPerEpoch;
     this.epochPeriodMs = epochPeriodMs;
+
+    this.maxEmitSpeed = configuration.maxEmitSpeed;
   }
 
   public GeneratorConfig reconfigure(GeneratorConfig configuration, boolean clearStopAtEvent) {
