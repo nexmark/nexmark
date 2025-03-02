@@ -145,6 +145,12 @@ public class NexmarkConfiguration implements Serializable {
 	 */
 	@JsonProperty public long stopAtEvent = -1L;
 
+	/**
+	 * If true, the source will emit events as fast as possible. Otherwise, it will emit events
+	 * according to the event time.
+	 */
+	@JsonProperty public boolean maxEmitSpeed = true;
+
 	/** Return full description as a string. */
 	@Override
 	public String toString() {
@@ -189,7 +195,8 @@ public class NexmarkConfiguration implements Serializable {
 			rateShape == that.rateShape &&
 			rateUnit == that.rateUnit &&
 			isSourceKeepAlive == that.isSourceKeepAlive &&
-			stopAtEvent == that.stopAtEvent;
+			stopAtEvent == that.stopAtEvent &&
+			maxEmitSpeed == that.maxEmitSpeed;
 	}
 
 	@Override
@@ -224,6 +231,7 @@ public class NexmarkConfiguration implements Serializable {
 			probDelayedEvent,
 			outOfOrderGroupSize,
 			isSourceKeepAlive,
-			stopAtEvent);
+			stopAtEvent,
+			maxEmitSpeed);
 	}
 }
