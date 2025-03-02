@@ -44,3 +44,4 @@ out/
 *.ipr
 *.iws
 load_*_*.mk
+.java-version
