@@ -30,7 +30,9 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -109,21 +111,91 @@ public class FlinkRestClient {
 		patch(url);
 	}
 
+	public String triggerCheckpoint(String jobId) {
+		String url = String.format("http://%s/jobs/%s/checkpoints", jmEndpoint, jobId);
+		String data = "{\"checkpointType\":\"CONFIGURED\"}";
+		String response = post(url, data);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			return jsonNode.get("request-id").asText();
+		} catch (Exception e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
+	}
+
+	public String stopWithSavepoint(String jobId) {
+		String url = String.format("http://%s/jobs/%s/stop", jmEndpoint, jobId);
+		String data = "{\"formatType\":\"NATIVE\", \"drain\":\"true\"}";
+		String response = post(url, data);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			return jsonNode.get("request-id").asText();
+		} catch (Exception e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
+	}
+
 	public String getCurrentJobId() {
 		updateAllJobStatus();
 		return lastJobId;
 	}
 
-	public boolean isJobRunning() {
-		updateAllJobStatus();
-		return !isNullOrEmpty(lastJobId) && jobIds.get(lastJobId).equalsIgnoreCase("RUNNING");
+	public synchronized boolean isJobRunning(String jobId, long readCount) {
+		String url = String.format("http://%s/jobs/%s", jmEndpoint, jobId);
+		String response = executeAsString(url);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			String state = jsonNode.get("state").asText();
+			if (!state.equalsIgnoreCase("RUNNING")) {
+				return false;
+			}
+			JsonNode vertices = jsonNode.get("vertices");
+			if (vertices.isEmpty()) {
+				return false;
+			}
+			return vertices.get(0).get("metrics").get("read-records").asLong() < readCount;
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
 	}
 
-	public boolean isJobCancellingOrFinished() {
+	public synchronized boolean isJobAndAllTasksRunning(String jobId) {
+		String url = String.format("http://%s/jobs/%s", jmEndpoint, jobId);
+		String response = executeAsString(url);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			String state = jsonNode.get("state").asText();
+			if (!state.equalsIgnoreCase("RUNNING")) {
+				return false;
+			}
+			JsonNode vertices = jsonNode.get("vertices");
+			if (vertices.isEmpty()) {
+				return false;
+			}
+			for (JsonNode vertex : vertices) {
+				String status = vertex.get("status").asText().toUpperCase();
+				if (status.equals("CANCELING") || status.equals("FAILED") || status.equals("CANCELED")) {
+					throw new RuntimeException("There is one task failed, canceling or canceled.");
+				} else if (!status.equals("RUNNING") && !status.equals("FINISHED")) {
+					return false;
+				}
+			}
+			return true;
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
+	}
+
+	public boolean isJobRunning(String jobId) {
 		updateAllJobStatus();
-		if (!isNullOrEmpty(lastJobId)) {
-			String status = jobIds.get(lastJobId);
-			return status.equalsIgnoreCase("CANCELLING") || status.equalsIgnoreCase("CANCELED") || status.equalsIgnoreCase("FINISHED");
+		return !isNullOrEmpty(jobId) && jobIds.get(jobId).equalsIgnoreCase("RUNNING");
+	}
+
+	public boolean isJobCanceledOrFinished(String jobId) {
+		updateAllJobStatus();
+		if (!isNullOrEmpty(jobId)) {
+			String status = jobIds.get(jobId);
+			return status.equalsIgnoreCase("CANCELED") || status.equalsIgnoreCase("FINISHED");
 		}
 		return true;
 	}
@@ -176,6 +248,31 @@ public class FlinkRestClient {
 		return TpsMetric.fromJson(response);
 	}
 
+	public Savepoint.Status checkCheckpointFinished(String jobId, String triggerId) {
+		String url = String.format("http://%s/jobs/%s/checkpoints/%s", jmEndpoint, jobId, triggerId);
+		String response = executeAsString(url);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			String status = jsonNode.get("status").get("id").asText();
+			return Savepoint.Status.valueOf(status);
+		} catch (Throwable e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
+	}
+
+	public Savepoint getJobLastCheckpoint(String jobId) {
+		String url = String.format("http://%s/jobs/%s/checkpoints", jmEndpoint, jobId);
+		String response = executeAsString(url);
+		try {
+			JsonNode jsonNode = NexmarkUtils.MAPPER.readTree(response);
+			return new Savepoint(
+					Savepoint.Status.valueOf(jsonNode.get("latest").get("completed").get("status").asText()),
+					jsonNode.get("latest").get("completed").get("external_path").asText());
+		} catch (Throwable e) {
+			throw new RuntimeException("The response is not a valid JSON string:\n" + response, e);
+		}
+	}
+
 	private void patch(String url) {
 		HttpPatch httpPatch = new HttpPatch();
 		httpPatch.setURI(URI.create(url));
@@ -190,6 +287,27 @@ public class FlinkRestClient {
 			}
 		} catch (Exception e) {
 			httpPatch.abort();
+			throw new RuntimeException(e);
+		}
+	}
+
+	private String post(String url, String data) {
+		HttpPost httpPost = new HttpPost();
+		httpPost.setURI(URI.create(url));
+		HttpResponse response;
+		try {
+			httpPost.setHeader("Connection", "close");
+			httpPost.setEntity(new StringEntity(data));
+			response = httpClient.execute(httpPost);
+			int httpCode = response.getStatusLine().getStatusCode();
+			if (httpCode != HttpStatus.SC_ACCEPTED) {
+				String msg = String.format("http execute failed, status code is %d, response: %s", httpCode, EntityUtils.toString(response.getEntity()));
+				throw new RuntimeException(msg);
+			} else {
+				return EntityUtils.toString(response.getEntity());
+			}
+		} catch (Exception e) {
+			httpPost.abort();
 			throw new RuntimeException(e);
 		}
 	}

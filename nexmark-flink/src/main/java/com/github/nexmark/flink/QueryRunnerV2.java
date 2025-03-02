@@ -24,6 +24,7 @@ import com.github.nexmark.flink.metric.MetricReporter;
 import com.github.nexmark.flink.metric.Savepoint;
 import com.github.nexmark.flink.utils.AutoClosableProcess;
 import com.github.nexmark.flink.workload.Workload;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,9 +42,9 @@ import java.util.regex.Pattern;
 
 import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
 
-public class QueryRunner {
+public class QueryRunnerV2 {
 
-	private static final Logger LOG = LoggerFactory.getLogger(QueryRunner.class);
+	private static final Logger LOG = LoggerFactory.getLogger(QueryRunnerV2.class);
 
 	private final String queryName;
 	private final Workload workload;
@@ -53,7 +54,7 @@ public class QueryRunner {
 	private final MetricReporter metricReporter;
 	private final FlinkRestClient flinkRestClient;
 
-	public QueryRunner(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, String category) {
+	public QueryRunnerV2(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, String category) {
 		this.queryName = queryName;
 		this.workload = workload;
 		this.location = location;
@@ -71,71 +72,103 @@ public class QueryRunner {
 			System.out.println("Start to run query " + queryName + " with workload " + workload.getSummaryString());
 			LOG.info("==================================================================");
 			LOG.info("Start to run query " + queryName + " with workload " + workload.getSummaryString());
-			if (!"insert_kafka".equals(queryName) // no warmup for kafka source prepare
-					&& (workload.getWarmupMills() > 0L || workload.getKafkaServers() == null)  // when using kafka source we need a stop for warmup
-					&& ((workload.getWarmupTps() > 0L && workload.getWarmupEvents() > 0L) || workload.getKafkaServers() != null) // otherwise we need a configuration for datagen source
-			) {
-				System.out.println("Start the warmup for at most " + workload.getWarmupMills() + "ms and " + workload.getWarmupEvents() + " events.");
-				LOG.info("Start the warmup for at most " + workload.getWarmupMills() + "ms and " + workload.getWarmupEvents() + " events.");
-				String jobId = runWarmup(workload.getWarmupTps(), workload.getWarmupEvents());
-				long waited = waitForOrJobFinish(jobId, workload.getWarmupMills());
-				waited += cancelJob(jobId);
-				System.out.println("Stop the warmup, cost " + waited + "ms.");
-				LOG.info("Stop the warmup, cost " + waited + ".");
+			long totalEvents = workload.getWarmupEvents() + workload.getEventsNum();
+			System.out.println("Start the warmup for " + workload.getWarmupEvents() + " events.");
+			LOG.info("Start the warmup for " + workload.getWarmupEvents() + " events.");
+			String warmupJob = runWarmup(workload.getWarmupEvents(), totalEvents);
+			long waited = waitForOrJobFinish(warmupJob, workload.getWarmupEvents());
+			Tuple2<Savepoint, Long> cancelResult = cancelJob(warmupJob, true);
+			savepoint = cancelResult.f0;
+			waited += cancelResult.f1;
+			System.out.println("Stop the warmup, cost " + waited + "ms.");
+			LOG.info("Stop the warmup, cost " + waited + ".");
+
+			if (savepoint == null) {
+				System.out.println("The query set warmup with savepoint, but does not get any savepoint.");
+				LOG.error("The query set warmup with savepoint, but does not get any savepoint.");
+				throw new RuntimeException("The query set warmup with savepoint, but does not get any savepoint.");
+			} else {
+				System.out.println("Get warmup savepoint: " + savepoint);
+				LOG.info("Get warmup savepoint: " + savepoint);
 			}
-			String jobId = runInternal();
+
+
+			String jobId = runInternal(totalEvents, savepoint);
 			// blocking until collect enough metrics
-			JobBenchmarkMetric metrics = metricReporter.reportMetric(jobId, workload.getEventsNum(), workload.getKafkaServers() != null);
+			JobBenchmarkMetric metrics = metricReporter.reportMetric(jobId, workload.getEventsNum(), false);
 			// cancel job
 			System.out.println("Stop job query " + queryName);
 			LOG.info("Stop job query " + queryName);
-			cancelJob(jobId);
+			cancelJob(jobId, false);
 			return metrics;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	private long waitForOrJobFinish(String jobId, long timeout) {
-		long waited = 0L;
-		while ((timeout <= 0L || waited < timeout) && flinkRestClient.isJobRunning(jobId)) {
+	private long waitForOrJobFinish(String jobId, long recordLimit) {
+		long start = System.currentTimeMillis();
+		while (flinkRestClient.isJobRunning(jobId, recordLimit)) {
 			try {
 				Thread.sleep(100L);
-				waited += 100L;
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
-		return waited;
+		return System.currentTimeMillis() - start;
 	}
 
-	private long cancelJob(String jobId) {
-		long cost = 0L;
+	private Tuple2<Savepoint, Long> cancelJob(String jobId, boolean savepoint) {
+		System.out.println("Cancelling job " + jobId + " with checkpoint = " + savepoint);
+		long start = System.currentTimeMillis();
+		boolean triggered = false;
+		String requestId = null;
+
 		while (!flinkRestClient.isJobCanceledOrFinished(jobId)) {
 			// make sure the job is canceled.
-			flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
+			if (savepoint) {
+				if (!triggered) {
+					requestId = flinkRestClient.triggerCheckpoint(jobId);
+					triggered = true;
+				} else {
+					Savepoint.Status status = flinkRestClient.checkCheckpointFinished(jobId, requestId);
+					if (status == Savepoint.Status.COMPLETED) {
+						// just wait for finished.
+						flinkRestClient.cancelJob(jobId);
+					} else if (status == Savepoint.Status.FAILED) {
+						triggered = false;
+					}
+				}
+			} else {
+				flinkRestClient.cancelJob(jobId);
+			}
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
-		return cost;
+		return Tuple2.of(
+				savepoint ? flinkRestClient.getJobLastCheckpoint(jobId) : null,
+				System.currentTimeMillis() - start
+		);
 	}
 
-	private String runWarmup(long tps, long events) throws IOException {
+	private String runWarmup(long stopAtEvents, long totalEvents) throws IOException {
 		Map<String, String> varsMap = initializeVarsMap();
-		if (workload.getKafkaServers() == null) {
-			varsMap.put("TPS", String.valueOf(tps));
-			varsMap.put("EVENTS_NUM", String.valueOf(events));
-		}
-		List<String> sqlLines = initializeAllSqlLines(varsMap);
+		varsMap.put("EVENTS_NUM", String.valueOf(totalEvents));
+		varsMap.put("STOP_AT", String.valueOf(stopAtEvents));
+		varsMap.put("KEEP_ALIVE", "true");
+		List<String> sqlLines = initializeAllSqlLines(varsMap, queryName + "_warmup", null);
 		return submitSQLJob(sqlLines);
 	}
 
-	private String runInternal() throws IOException {
+	private String runInternal(long totalEvents, Savepoint savepoint) throws IOException {
 		Map<String, String> varsMap = initializeVarsMap();
-		List<String> sqlLines = initializeAllSqlLines(varsMap);
+		varsMap.put("EVENTS_NUM", String.valueOf(totalEvents));
+		varsMap.put("STOP_AT", "-1");
+		varsMap.put("KEEP_ALIVE", "false");
+		List<String> sqlLines = initializeAllSqlLines(varsMap, queryName, savepoint);
 		return submitSQLJob(sqlLines);
 	}
 
@@ -148,18 +181,23 @@ public class QueryRunner {
 		varsMap.put("SUBMIT_TIME", submitTime.toString());
 		varsMap.put("FLINK_HOME", flinkDist.toFile().getAbsolutePath());
 		varsMap.put("TPS", String.valueOf(workload.getTps()));
-		varsMap.put("EVENTS_NUM", String.valueOf(workload.getEventsNum()));
 		varsMap.put("PERSON_PROPORTION", String.valueOf(workload.getPersonProportion()));
 		varsMap.put("AUCTION_PROPORTION", String.valueOf(workload.getAuctionProportion()));
 		varsMap.put("BID_PROPORTION", String.valueOf(workload.getBidProportion()));
-		varsMap.put("NEXMARK_TABLE", workload.getKafkaServers() == null ? "datagen" : "kafka");
-		varsMap.put("BOOTSTRAP_SERVERS", workload.getKafkaServers() == null ? "" : workload.getKafkaServers());
+		varsMap.put("NEXMARK_TABLE", "datagen");
 		return varsMap;
 	}
 
-	private List<String> initializeAllSqlLines(Map<String, String> vars) throws IOException {
+	private List<String> initializeAllSqlLines(Map<String, String> vars, String name, Savepoint savepoint) throws IOException {
 		List<String> allLines = new ArrayList<>();
-		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), "ddl_gen.sql")));
+		if (savepoint != null) {
+			allLines.add("SET 'execution.savepoint.path' = '" + savepoint.getPath() + "';");
+			allLines.add("SET 'execution.state-recovery.claim-mode' = 'CLAIM';");
+		}
+		if (name != null && !name.isEmpty()) {
+			allLines.add("SET 'pipeline.name' = '" + name + "';");
+		}
+		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), "ddl_gen_v2.sql")));
 		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), "ddl_kafka.sql")));
 		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), "ddl_views.sql")));
 		allLines.addAll(initializeSqlFileLines(vars, new File(queryLocation.toFile(), queryName + ".sql")));

@@ -115,14 +115,14 @@ public class MetricReporter {
 		}
 	}
 
-	private boolean isJobRunning() {
-		return flinkRestClient.isJobRunning();
+	private boolean isJobRunning(String jobId) {
+		return flinkRestClient.isJobRunning(jobId);
 	}
 
-	private void waitForOrJobFinish(Duration duration) {
+	private void waitForOrJobFinish(String jobId, Duration duration) {
 		// The TPS drop to 0 which means job is finished or specific interval for tps mode
 		Deadline deadline = Deadline.fromNow(duration);
-		while (isJobRunning() && deadline.hasTimeLeft() && !jobIsFinished()) {
+		while (isJobRunning(jobId) && deadline.hasTimeLeft() && !jobIsFinished()) {
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
@@ -130,6 +130,16 @@ public class MetricReporter {
 			}
 			if (error != null) {
 				throw new RuntimeException(error);
+			}
+		}
+	}
+
+	private void waitForOrJobRunning(String jobId) {
+		while (!flinkRestClient.isJobAndAllTasksRunning(jobId)) {
+			try {
+				Thread.sleep(50L);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
 			}
 		}
 	}
@@ -151,9 +161,12 @@ public class MetricReporter {
 		return false;
 	}
 
-	public JobBenchmarkMetric reportMetric(String jobId, long eventsNum) {
-		System.out.printf("Monitor metrics after %s seconds.%n", monitorDelay.getSeconds());
+	public JobBenchmarkMetric reportMetric(String jobId, long eventsNum, boolean trim) {
 		long startTime = System.currentTimeMillis();
+		waitForOrJobRunning(jobId);
+		long jobStartTime = System.currentTimeMillis();
+		System.out.println("Waited for job until running status for " + (jobStartTime - startTime) + "ms.");
+		System.out.printf("Monitor metrics after %s seconds.%n", monitorDelay.getSeconds());
 		waitFor(monitorDelay);
 		if (eventsNum == 0) {
 			System.out.printf("Start to monitor metrics for %s seconds.%n", monitorDuration.getSeconds());
@@ -162,7 +175,7 @@ public class MetricReporter {
 		}
 		submitMonitorThread(jobId, eventsNum);
 		// monitorDuration is Long.MAX_VALUE in event number mode
-		waitForOrJobFinish(monitorDuration);
+		waitForOrJobFinish(jobId, monitorDuration);
 
 		long endTime = System.currentTimeMillis();
 
@@ -177,11 +190,13 @@ public class MetricReporter {
 		int realMetricSize = metrics.size();
 
 		// If the job finished, the tps will drop to 0, so we need to remove the effect of these metrics on the final result
-		for (int i = metrics.size() - 1; i >= 0; i--) {
-			if (Double.compare(metrics.get(i).getTps(), 0.0) != 0) {
-				break;
-			} else {
-				realMetricSize--;
+		if (trim) {
+			for (int i = metrics.size() - 1; i >= 0; i--) {
+				if (Double.compare(metrics.get(i).getTps(), 0.0) != 0) {
+					break;
+				} else {
+					realMetricSize--;
+				}
 			}
 		}
 
@@ -194,7 +209,7 @@ public class MetricReporter {
 		double avgTps = sumTps / realMetrics.size();
 		double avgCpu = sumCpu / realMetrics.size();
 		JobBenchmarkMetric metric = new JobBenchmarkMetric(
-				avgTps, avgCpu, eventsNum, endTime - startTime);
+				avgTps, avgCpu, eventsNum, endTime - jobStartTime, jobStartTime - startTime);
 
 		String message;
 		if (eventsNum == 0) {
@@ -202,10 +217,11 @@ public class MetricReporter {
 					metric.getPrettyTps(),
 					metric.getPrettyCpu());
 		} else {
-			message = String.format("Summary Average: EventsNum=%s, Cores=%s, Time=%s s",
+			message = String.format("Summary Average: EventsNum=%s, Cores=%s, Time=%s s, Initialize Time=%s s",
 					NUMBER_FORMAT.format(eventsNum),
 					metric.getPrettyCpu(),
-					formatDoubleValue(metric.getTimeSeconds()));
+					formatDoubleValue(metric.getTimeSeconds()),
+					formatDoubleValue(metric.getJobInitializedTimeSeconds()));
 		}
 		System.out.println(message);
 		LOG.info(message);
