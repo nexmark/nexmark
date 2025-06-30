@@ -19,6 +19,7 @@
 package com.github.nexmark.flink.source;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectIdentifier;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
@@ -120,17 +121,21 @@ public class NexmarkTableSourceFactoryTest {
 		return FactoryUtil.createDynamicTableSource(
 			null,
 			ObjectIdentifier.of("default", "default", "t1"),
-			new ResolvedCatalogTable(
-					CatalogTable.newBuilder()
-							.schema(NEXMARK_SCHEMA)
-							.comment("mock source")
-							.partitionKeys(new ArrayList<>())
-							.options(options)
-							.build(),
-					RESOLVED_SCHEMA),
+//			new ResolvedCatalogTable(
+//					CatalogTable.newBuilder()
+//							.schema(NEXMARK_SCHEMA)
+//							.comment("mock source")
+//							.partitionKeys(new ArrayList<>())
+//							.options(options)
+//							.build(),
+//					RESOLVED_SCHEMA),
+				new ResolvedCatalogTable(CatalogTable.of(NEXMARK_SCHEMA, "mock source", new ArrayList<>(), options),RESOLVED_SCHEMA),
 			Collections.emptyMap(),
 			new Configuration(),
 			NexmarkTableSourceFactoryTest.class.getClassLoader(),
 			false);
+
+
+
 	}
 }
