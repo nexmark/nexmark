@@ -24,7 +24,7 @@ These are multiple queries over a three entities model representing on online au
 | q3 | Local Item Suggestion | Who is selling in OR, ID or CA in category 10, and for what auction ids?  | ✅ |
 | q4 | Average Price for a Category | Select the average of the wining bid prices for all auctions in each category. | ✅ |
 | q5 | Hot Items | Which auctions have seen the most bids in the last period? | ✅ |
-| q6 | Average Selling Price by Seller | What is the average selling price per seller for their last 10 closed auctions. | [FLINK-19059](https://issues.apache.org/jira/browse/FLINK-19059) |
+| q6 | Average Selling Price by Seller | What is the average selling price per seller for their last 10 closed auctions. | ✅ |
 | q7 | Highest Bid | Select the bids with the highest bid price in the last period. | ✅ |
 | q8 | Monitor New Users | Select people who have entered the system and created auctions in the last period. | ✅ |
 | q9 | Winning Bids | Find the winning bid for each auction. | ✅ |
