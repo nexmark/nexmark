@@ -119,10 +119,11 @@ public class MetricReporter {
 		return flinkRestClient.isJobRunning(jobId);
 	}
 
-	private void waitForOrJobFinish(String jobId, Duration duration) {
+	private void waitForOrJobFinish(String jobId, Duration duration, boolean isKafkaUsed) {
 		// The TPS drop to 0 which means job is finished or specific interval for tps mode
 		Deadline deadline = Deadline.fromNow(duration);
-		while (isJobRunning(jobId) && deadline.hasTimeLeft() && !jobIsFinished()) {
+		while (isJobRunning(jobId) && deadline.hasTimeLeft()) {
+            if (isKafkaUsed && jobIsFinished()) break;
 			try {
 				Thread.sleep(100L);
 			} catch (InterruptedException e) {
@@ -151,7 +152,7 @@ public class MetricReporter {
 		int lastPos = metrics.size() - 1;
 		BenchmarkMetric lastMetric = metrics.get(lastPos);
 		if (Double.compare(lastMetric.getTps(), 0.0) == 0) {
-			for (int i = 1;i < 5; i++) {
+			for (int i = 1; i < 5; i++) {
 				if (Double.compare(metrics.get(lastPos - i).getTps(), 0.0) != 0) {
 					return false;
 				}
@@ -161,7 +162,7 @@ public class MetricReporter {
 		return false;
 	}
 
-	public JobBenchmarkMetric reportMetric(String jobId, long eventsNum, boolean trim) {
+	public JobBenchmarkMetric reportMetric(String jobId, long eventsNum, boolean trim, boolean isKafkaUsed) {
 		long startTime = System.currentTimeMillis();
 		waitForOrJobRunning(jobId);
 		long jobStartTime = System.currentTimeMillis();
@@ -175,7 +176,7 @@ public class MetricReporter {
 		}
 		submitMonitorThread(jobId, eventsNum);
 		// monitorDuration is Long.MAX_VALUE in event number mode
-		waitForOrJobFinish(jobId, monitorDuration);
+		waitForOrJobFinish(jobId, monitorDuration, isKafkaUsed);
 
 		long endTime = System.currentTimeMillis();
 
