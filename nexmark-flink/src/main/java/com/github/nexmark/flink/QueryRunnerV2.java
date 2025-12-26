@@ -18,12 +18,15 @@
 
 package com.github.nexmark.flink;
 
+import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
+
 import com.github.nexmark.flink.metric.FlinkRestClient;
 import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
 import com.github.nexmark.flink.metric.Savepoint;
 import com.github.nexmark.flink.utils.AutoClosableProcess;
 import com.github.nexmark.flink.workload.Workload;
+
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
 
 public class QueryRunnerV2 {
 
@@ -95,7 +96,10 @@ public class QueryRunnerV2 {
 
 			String jobId = runInternal(totalEvents, savepoint);
 			// blocking until collect enough metrics
-			JobBenchmarkMetric metrics = metricReporter.reportMetric(jobId, workload.getEventsNum(), false);
+			JobBenchmarkMetric metrics = metricReporter.reportMetric(jobId,
+                    workload.getEventsNum(),
+                    false,
+                    workload.getKafkaServers() != null);
 			// cancel job
 			System.out.println("Stop job query " + queryName);
 			LOG.info("Stop job query " + queryName);
