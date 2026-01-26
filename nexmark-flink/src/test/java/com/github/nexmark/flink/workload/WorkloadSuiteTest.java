@@ -135,6 +135,7 @@ public class WorkloadSuiteTest {
 		query2Workload.put("q20", load);
 		query2Workload.put("q21", load);
 		query2Workload.put("q22", load);
+		query2Workload.put("q23", load);
 		query2Workload.put("insert_kafka", new Workload(10000000, 0, 1, 3, 46));
 
 		WorkloadSuite expected = new WorkloadSuite(query2Workload);
