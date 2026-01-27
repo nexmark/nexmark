@@ -94,8 +94,12 @@ public class Benchmark {
 		Configuration nexmarkConf = NexmarkGlobalConfiguration.loadConfiguration();
 		String jmAddress = nexmarkConf.get(FlinkNexmarkOptions.FLINK_REST_ADDRESS);
 		int jmPort = nexmarkConf.get(FlinkNexmarkOptions.FLINK_REST_PORT);
-		String reporterAddress = nexmarkConf.get(FlinkNexmarkOptions.METRIC_REPORTER_HOST);
-		int reporterPort = nexmarkConf.get(FlinkNexmarkOptions.METRIC_REPORTER_PORT);
+		// Use receiving-specific host/port if configured, otherwise fall back to reporter host/port
+		String reporterAddress = nexmarkConf.getOptional(FlinkNexmarkOptions.METRIC_REPORTER_RECEIVING_HOST)
+			.filter(s -> !s.isEmpty())
+			.orElseGet(() -> nexmarkConf.get(FlinkNexmarkOptions.METRIC_REPORTER_HOST));
+		int reporterPort = nexmarkConf.getOptional(FlinkNexmarkOptions.METRIC_REPORTER_RECEIVING_PORT)
+			.orElseGet(() -> nexmarkConf.get(FlinkNexmarkOptions.METRIC_REPORTER_PORT));
 		FlinkRestClient flinkRestClient = new FlinkRestClient(jmAddress, jmPort);
 		CpuMetricReceiver cpuMetricReceiver = new CpuMetricReceiver(reporterAddress, reporterPort);
 		cpuMetricReceiver.runServer();

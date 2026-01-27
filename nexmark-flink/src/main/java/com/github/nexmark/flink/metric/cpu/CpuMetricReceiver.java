@@ -159,8 +159,11 @@ public class CpuMetricReceiver implements Closeable {
 	public static void main(String[] args) throws ExecutionException, InterruptedException {
 		// start metric servers
 		Configuration conf = NexmarkGlobalConfiguration.loadConfiguration();
-		String reporterAddress = conf.get(FlinkNexmarkOptions.METRIC_REPORTER_HOST);
-		int reporterPort = conf.get(FlinkNexmarkOptions.METRIC_REPORTER_PORT);
+		String reporterAddress = conf.getOptional(FlinkNexmarkOptions.METRIC_REPORTER_RECEIVING_HOST)
+			.filter(s -> !s.isEmpty())
+			.orElseGet(() -> conf.get(FlinkNexmarkOptions.METRIC_REPORTER_HOST));
+		int reporterPort = conf.getOptional(FlinkNexmarkOptions.METRIC_REPORTER_RECEIVING_PORT)
+			.orElseGet(() -> conf.get(FlinkNexmarkOptions.METRIC_REPORTER_PORT));
 		CpuMetricReceiver cpuMetricReceiver = new CpuMetricReceiver(reporterAddress, reporterPort);
 		cpuMetricReceiver.runServer();
 		cpuMetricReceiver.service.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
