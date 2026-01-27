@@ -13,7 +13,7 @@ CREATE TABLE nexmark_q5 (
   auction  BIGINT,
   num  BIGINT
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q5

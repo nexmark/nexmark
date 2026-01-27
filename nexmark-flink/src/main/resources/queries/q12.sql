@@ -14,7 +14,7 @@ CREATE TABLE nexmark_q12 (
   starttime TIMESTAMP(3),
   endtime TIMESTAMP(3)
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 CREATE VIEW B AS SELECT *, PROCTIME() as p_time FROM bid;

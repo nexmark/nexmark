@@ -9,7 +9,7 @@ CREATE TABLE nexmark_q6 (
   seller VARCHAR,
   avg_price  BIGINT
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 -- TODO: this query is not supported yet in Flink SQL, because the OVER WINDOW operator doesn't

@@ -16,7 +16,7 @@ CREATE TABLE nexmark_q14 (
     extra VARCHAR,
     c_counts BIGINT
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q14

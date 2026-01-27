@@ -15,15 +15,7 @@ CREATE TABLE nexmark_q10 (
   dt STRING,
   hm STRING
 ) PARTITIONED BY (dt, hm) WITH (
-  'connector' = 'filesystem',
-  'path' = 'file://${NEXMARK_DIR}/data/output/${SUBMIT_TIME}/bid/',
-  'format' = 'csv',
-  'sink.partition-commit.trigger' = 'partition-time',
-  'sink.partition-commit.delay' = '1 min',
-  'sink.partition-commit.policy.kind' = 'success-file',
-  'partition.time-extractor.timestamp-pattern' = '$dt $hm:00',
-  'sink.rolling-policy.rollover-interval' = '1min',
-  'sink.rolling-policy.check-interval' = '1min'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q10

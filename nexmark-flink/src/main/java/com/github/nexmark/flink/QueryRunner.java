@@ -20,6 +20,7 @@ package com.github.nexmark.flink;
 
 import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
 
+import com.github.nexmark.core.SinkDdlProvider;
 import com.github.nexmark.flink.metric.FlinkRestClient;
 import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
@@ -53,8 +54,9 @@ public class QueryRunner {
 	private final Path flinkDist;
 	private final MetricReporter metricReporter;
 	private final FlinkRestClient flinkRestClient;
+	private final SinkDdlProvider sinkDdlProvider;
 
-	public QueryRunner(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, String category) {
+	public QueryRunner(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, String category, SinkDdlProvider sinkDdlProvider) {
 		this.queryName = queryName;
 		this.workload = workload;
 		this.location = location;
@@ -63,6 +65,7 @@ public class QueryRunner {
 		this.flinkDist = flinkDist;
 		this.metricReporter = metricReporter;
 		this.flinkRestClient = flinkRestClient;
+		this.sinkDdlProvider = sinkDdlProvider;
 	}
 
 	public JobBenchmarkMetric run() {
@@ -158,6 +161,7 @@ public class QueryRunner {
 		varsMap.put("BID_PROPORTION", String.valueOf(workload.getBidProportion()));
 		varsMap.put("NEXMARK_TABLE", workload.getKafkaServers() == null ? "datagen" : "kafka");
 		varsMap.put("BOOTSTRAP_SERVERS", workload.getKafkaServers() == null ? "" : workload.getKafkaServers());
+		varsMap.put("SINK_DDL", sinkDdlProvider.getSinkDdl(queryName));
 		return varsMap;
 	}
 

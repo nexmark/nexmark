@@ -11,7 +11,7 @@ CREATE TABLE nexmark_q1 (
   `dateTime`  TIMESTAMP(3),
   extra  VARCHAR
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q1

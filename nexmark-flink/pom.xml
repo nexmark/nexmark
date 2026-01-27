@@ -31,6 +31,11 @@ under the License.
 
     <dependencies>
         <dependency>
+            <groupId>com.github.nexmark</groupId>
+            <artifactId>nexmark-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.15.1</version>

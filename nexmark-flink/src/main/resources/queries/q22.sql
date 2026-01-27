@@ -14,7 +14,7 @@ CREATE TABLE nexmark_q22 (
       dir2  VARCHAR,
       dir3  VARCHAR
 ) WITH (
-    'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q22
