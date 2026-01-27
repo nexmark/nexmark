@@ -22,7 +22,7 @@ CREATE TABLE nexmark_q16 (
     rank2_auctions BIGINT,
     rank3_auctions BIGINT
 ) WITH (
-    'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q16

@@ -38,6 +38,7 @@ under the License.
     </properties>
 
     <modules>
+        <module>nexmark-core</module>
         <module>nexmark-flink</module>
         <module>nexmark-spark</module>
     </modules>

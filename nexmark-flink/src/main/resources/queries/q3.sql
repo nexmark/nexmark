@@ -11,7 +11,7 @@ CREATE TABLE nexmark_q3 (
   state  VARCHAR,
   id  BIGINT
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q3

@@ -12,7 +12,7 @@ CREATE TABLE nexmark_q21 (
     channel  VARCHAR,
     channel_id  VARCHAR
 ) WITH (
-    'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q21

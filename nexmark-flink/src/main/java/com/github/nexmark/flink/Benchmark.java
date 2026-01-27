@@ -20,6 +20,7 @@ package com.github.nexmark.flink;
 
 import org.apache.flink.configuration.Configuration;
 
+import com.github.nexmark.core.SinkDdlProvider;
 import com.github.nexmark.flink.metric.FlinkRestClient;
 import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
@@ -36,6 +37,7 @@ import org.apache.commons.cli.ParseException;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -108,6 +110,12 @@ public class Benchmark {
 
 		WorkloadSuite workloadSuite = WorkloadSuite.fromConf(nexmarkConf, category);
 
+		// create sink DDL provider from environment or defaults
+		LocalDateTime now = LocalDateTime.now();
+		String submitTime = now.minusNanos(now.getNano()).toString();
+		SinkDdlProvider sinkDdlProvider = SinkDdlProvider.fromEnv(
+				location.toFile().getAbsolutePath(), submitTime);
+
 		// start to run queries
 		LinkedHashMap<String, JobBenchmarkMetric> totalMetrics = new LinkedHashMap<>();
 
@@ -123,7 +131,8 @@ public class Benchmark {
 					location,
 					flinkDist,
 					totalMetrics,
-					category);
+					category,
+					sinkDdlProvider);
 		} else {
 			executeQueries(
 					queries,
@@ -136,7 +145,8 @@ public class Benchmark {
 					location,
 					flinkDist,
 					totalMetrics,
-					category);
+					category,
+					sinkDdlProvider);
 		}
 
 		// print benchmark summary
@@ -198,7 +208,8 @@ public class Benchmark {
 			Path location,
 			Path flinkDist,
 			LinkedHashMap<String, JobBenchmarkMetric> totalMetrics,
-			String category) {
+			String category,
+			SinkDdlProvider sinkDdlProvider) {
 		for (String queryName : queries) {
 			Workload workload = workloadSuite.getQueryWorkload(queryName);
 			if (workload == null) {
@@ -222,7 +233,8 @@ public class Benchmark {
 							flinkDist,
 							reporter,
 							flinkRestClient,
-							category);
+							category,
+							sinkDdlProvider);
 			JobBenchmarkMetric metric = runner.run();
 			totalMetrics.put(queryName, metric);
 		}
@@ -239,7 +251,8 @@ public class Benchmark {
 			Path location,
 			Path flinkDist,
 			LinkedHashMap<String, JobBenchmarkMetric> totalMetrics,
-			String category) {
+			String category,
+			SinkDdlProvider sinkDdlProvider) {
 		for (String queryName : queries) {
 			Workload workload = workloadSuite.getQueryWorkload(queryName);
 			if (workload == null) {
@@ -263,7 +276,8 @@ public class Benchmark {
 							flinkDist,
 							reporter,
 							flinkRestClient,
-							category);
+							category,
+							sinkDdlProvider);
 			JobBenchmarkMetric metric = runner.run();
 			totalMetrics.put(queryName, metric);
 		}

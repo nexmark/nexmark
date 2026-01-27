@@ -21,7 +21,7 @@ CREATE TABLE nexmark_q9 (
   bid_dateTime  TIMESTAMP(3),
   bid_extra  VARCHAR
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q9

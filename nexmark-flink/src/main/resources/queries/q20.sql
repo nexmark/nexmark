@@ -24,7 +24,7 @@ CREATE TABLE nexmark_q20 (
     category  BIGINT,
     auction_extra  VARCHAR
 ) WITH (
-    'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q20

@@ -20,6 +20,7 @@ package com.github.nexmark.flink;
 
 import static com.github.nexmark.flink.Benchmark.CATEGORY_OA;
 
+import com.github.nexmark.core.SinkDdlProvider;
 import com.github.nexmark.flink.metric.FlinkRestClient;
 import com.github.nexmark.flink.metric.JobBenchmarkMetric;
 import com.github.nexmark.flink.metric.MetricReporter;
@@ -54,8 +55,9 @@ public class QueryRunnerV2 {
 	private final Path flinkDist;
 	private final MetricReporter metricReporter;
 	private final FlinkRestClient flinkRestClient;
+	private final SinkDdlProvider sinkDdlProvider;
 
-	public QueryRunnerV2(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, String category) {
+	public QueryRunnerV2(String queryName, Workload workload, Path location, Path flinkDist, MetricReporter metricReporter, FlinkRestClient flinkRestClient, String category, SinkDdlProvider sinkDdlProvider) {
 		this.queryName = queryName;
 		this.workload = workload;
 		this.location = location;
@@ -64,6 +66,7 @@ public class QueryRunnerV2 {
 		this.flinkDist = flinkDist;
 		this.metricReporter = metricReporter;
 		this.flinkRestClient = flinkRestClient;
+		this.sinkDdlProvider = sinkDdlProvider;
 	}
 
 	public JobBenchmarkMetric run() {
@@ -189,6 +192,7 @@ public class QueryRunnerV2 {
 		varsMap.put("AUCTION_PROPORTION", String.valueOf(workload.getAuctionProportion()));
 		varsMap.put("BID_PROPORTION", String.valueOf(workload.getBidProportion()));
 		varsMap.put("NEXMARK_TABLE", "datagen");
+		varsMap.put("SINK_DDL", sinkDdlProvider.getSinkDdl(queryName));
 		return varsMap;
 	}
 

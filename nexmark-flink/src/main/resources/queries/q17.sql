@@ -17,7 +17,7 @@ CREATE TABLE nexmark_q17 (
   avg_price BIGINT,
   sum_price BIGINT
 ) WITH (
-  'connector' = 'blackhole'
+  ${SINK_DDL}
 );
 
 INSERT INTO nexmark_q17
