@@ -59,13 +59,28 @@ public class FlinkNexmarkOptions {
 		.key("nexmark.metric.reporter.host")
 		.stringType()
 		.defaultValue("localhost")
-		.withDescription("The metric reporter server host.");
+		.withDescription("The metric reporter host that sender connects to.");
 
 	public static final ConfigOption<Integer> METRIC_REPORTER_PORT = ConfigOptions
 		.key("nexmark.metric.reporter.port")
 		.intType()
 		.defaultValue(9098)
-		.withDescription("The metric reporter server port.");
+		.withDescription("The metric reporter port that sender connects to.");
+
+	public static final ConfigOption<String> METRIC_REPORTER_RECEIVING_HOST = ConfigOptions
+		.key("nexmark.metric.reporter.receiving.host")
+		.stringType()
+		.noDefaultValue()
+		.withDescription("The host for metric receiver to bind to. " +
+			"If not set, falls back to nexmark.metric.reporter.host. " +
+			"Useful in K8s where receiver binds to 0.0.0.0 but sender connects via service DNS.");
+
+	public static final ConfigOption<Integer> METRIC_REPORTER_RECEIVING_PORT = ConfigOptions
+		.key("nexmark.metric.reporter.receiving.port")
+		.intType()
+		.noDefaultValue()
+		.withDescription("The port for metric receiver to bind to. " +
+			"If not set, falls back to nexmark.metric.reporter.port.");
 
 	public static final ConfigOption<String> FLINK_REST_ADDRESS = ConfigOptions
 		.key("flink.rest.address")
