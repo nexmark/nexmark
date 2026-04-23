@@ -46,6 +46,8 @@ import java.util.regex.Pattern;
 public class QueryRunnerV2 {
 
 	private static final Logger LOG = LoggerFactory.getLogger(QueryRunnerV2.class);
+	private static final long JOB_STATUS_POLL_INTERVAL_MS = 500L;
+	private static final long CANCEL_RETRY_INTERVAL_MS = 2000L;
 
 	private final String queryName;
 	private final Workload workload;
@@ -113,11 +115,7 @@ public class QueryRunnerV2 {
 	private long waitForOrJobFinish(String jobId, long recordLimit) {
 		long start = System.currentTimeMillis();
 		while (flinkRestClient.isJobRunning(jobId, recordLimit)) {
-			try {
-				Thread.sleep(100L);
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
-			}
+			sleepQuietly(JOB_STATUS_POLL_INTERVAL_MS);
 		}
 		return System.currentTimeMillis() - start;
 	}
@@ -126,7 +124,9 @@ public class QueryRunnerV2 {
 		System.out.println("Cancelling job " + jobId + " with checkpoint = " + savepoint);
 		long start = System.currentTimeMillis();
 		boolean triggered = false;
+		boolean checkpointCompleted = false;
 		String requestId = null;
+		long lastCancelTime = -1L;
 
 		while (!flinkRestClient.isJobCanceledOrFinished(jobId)) {
 			// make sure the job is canceled.
@@ -134,28 +134,44 @@ public class QueryRunnerV2 {
 				if (!triggered) {
 					requestId = flinkRestClient.triggerCheckpoint(jobId);
 					triggered = true;
-				} else {
+					checkpointCompleted = false;
+				} else if (!checkpointCompleted) {
 					Savepoint.Status status = flinkRestClient.checkCheckpointFinished(jobId, requestId);
 					if (status == Savepoint.Status.COMPLETED) {
-						// just wait for finished.
-						flinkRestClient.cancelJob(jobId);
+						checkpointCompleted = true;
 					} else if (status == Savepoint.Status.FAILED) {
 						triggered = false;
+						requestId = null;
 					}
 				}
+				if (checkpointCompleted && shouldRetryCancel(lastCancelTime)) {
+					flinkRestClient.cancelJob(jobId);
+					lastCancelTime = System.currentTimeMillis();
+				}
 			} else {
-				flinkRestClient.cancelJob(jobId);
+				if (shouldRetryCancel(lastCancelTime)) {
+					flinkRestClient.cancelJob(jobId);
+					lastCancelTime = System.currentTimeMillis();
+				}
 			}
-			try {
-				Thread.sleep(100L);
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
-			}
+			sleepQuietly(JOB_STATUS_POLL_INTERVAL_MS);
 		}
 		return Tuple2.of(
 				savepoint ? flinkRestClient.getJobLastCheckpoint(jobId) : null,
 				System.currentTimeMillis() - start
 		);
+	}
+
+	private boolean shouldRetryCancel(long lastCancelTime) {
+		return lastCancelTime < 0L || System.currentTimeMillis() - lastCancelTime >= CANCEL_RETRY_INTERVAL_MS;
+	}
+
+	private static void sleepQuietly(long sleepTimeMs) {
+		try {
+			Thread.sleep(sleepTimeMs);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private String runWarmup(long stopAtEvents, long totalEvents) throws IOException {

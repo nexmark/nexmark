@@ -45,6 +45,8 @@ import java.util.regex.Pattern;
 public class QueryRunner {
 
 	private static final Logger LOG = LoggerFactory.getLogger(QueryRunner.class);
+	private static final long JOB_STATUS_POLL_INTERVAL_MS = 500L;
+	private static final long CANCEL_RETRY_INTERVAL_MS = 2000L;
 
 	private final String queryName;
 	private final Workload workload;
@@ -103,28 +105,35 @@ public class QueryRunner {
 	private long waitForOrJobFinish(String jobId, long timeout) {
 		long waited = 0L;
 		while ((timeout <= 0L || waited < timeout) && flinkRestClient.isJobRunning(jobId)) {
-			try {
-				Thread.sleep(100L);
-				waited += 100L;
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
-			}
+			sleepQuietly(JOB_STATUS_POLL_INTERVAL_MS);
+			waited += JOB_STATUS_POLL_INTERVAL_MS;
 		}
 		return waited;
 	}
 
 	private long cancelJob(String jobId) {
-		long cost = 0L;
+		long start = System.currentTimeMillis();
+		long lastCancelTime = -1L;
 		while (!flinkRestClient.isJobCanceledOrFinished(jobId)) {
-			// make sure the job is canceled.
-			flinkRestClient.cancelJob(flinkRestClient.getCurrentJobId());
-			try {
-				Thread.sleep(100L);
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
+			if (shouldRetryCancel(lastCancelTime)) {
+				flinkRestClient.cancelJob(jobId);
+				lastCancelTime = System.currentTimeMillis();
 			}
+			sleepQuietly(JOB_STATUS_POLL_INTERVAL_MS);
 		}
-		return cost;
+		return System.currentTimeMillis() - start;
+	}
+
+	private boolean shouldRetryCancel(long lastCancelTime) {
+		return lastCancelTime < 0L || System.currentTimeMillis() - lastCancelTime >= CANCEL_RETRY_INTERVAL_MS;
+	}
+
+	private static void sleepQuietly(long sleepTimeMs) {
+		try {
+			Thread.sleep(sleepTimeMs);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private String runWarmup(long tps, long events) throws IOException {
