@@ -25,9 +25,9 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
@@ -56,10 +56,10 @@ public class FlinkRestClient {
 
 	private static int CONNECT_TIMEOUT = 5000;
 	private static int SOCKET_TIMEOUT = 60000;
-	private static int CONNECTION_REQUEST_TIMEOUT = 10000;
+	private static int CONNECTION_REQUEST_TIMEOUT = 60000;
 	private static int MAX_IDLE_TIME = 60000;
-	private static int MAX_CONN_TOTAL = 60;
-	private static int MAX_CONN_PER_ROUTE = 30;
+	private static int MAX_CONN_TOTAL = 512;
+	private static int MAX_CONN_PER_ROUTE = 256;
 
 	private final String jmEndpoint;
 	private final CloseableHttpClient httpClient;
@@ -276,71 +276,64 @@ public class FlinkRestClient {
 	private void patch(String url) {
 		HttpPatch httpPatch = new HttpPatch();
 		httpPatch.setURI(URI.create(url));
-		HttpResponse response;
-		try {
-			httpPatch.setHeader("Connection", "close");
-			response = httpClient.execute(httpPatch);
-			int httpCode = response.getStatusLine().getStatusCode();
-			if (httpCode != HttpStatus.SC_ACCEPTED) {
-				String msg = String.format("http execute failed,status code is %d", httpCode);
-				throw new RuntimeException(msg);
-			}
-		} catch (Exception e) {
-			httpPatch.abort();
-			throw new RuntimeException(e);
-		}
+		executeWithoutResponseBody(httpPatch, HttpStatus.SC_OK, HttpStatus.SC_ACCEPTED);
 	}
 
 	private String post(String url, String data) {
 		HttpPost httpPost = new HttpPost();
 		httpPost.setURI(URI.create(url));
-		HttpResponse response;
-		try {
-			httpPost.setHeader("Connection", "close");
-			httpPost.setEntity(new StringEntity(data));
-			response = httpClient.execute(httpPost);
-			int httpCode = response.getStatusLine().getStatusCode();
-			if (httpCode != HttpStatus.SC_ACCEPTED) {
-				String msg = String.format("http execute failed, status code is %d, response: %s", httpCode, EntityUtils.toString(response.getEntity()));
-				throw new RuntimeException(msg);
-			} else {
-				return EntityUtils.toString(response.getEntity());
-			}
-		} catch (Exception e) {
-			httpPost.abort();
-			throw new RuntimeException(e);
-		}
+		httpPost.setEntity(new StringEntity(data, Consts.UTF_8));
+		return executeForString(httpPost, HttpStatus.SC_OK, HttpStatus.SC_ACCEPTED);
 	}
 
 	private String executeAsString(String url) {
 		HttpGet httpGet = new HttpGet();
 		httpGet.setURI(URI.create(url));
-		try {
-			HttpEntity entity = execute(httpGet).getEntity();
-			if (entity != null) {
-				return EntityUtils.toString(entity, Consts.UTF_8);
-			}
-		} catch (Exception e) {
-			throw new RuntimeException("Failed to request URL " + url, e);
+		String response = executeForString(httpGet, HttpStatus.SC_OK);
+		if (!response.isEmpty()) {
+			return response;
 		}
 		throw new RuntimeException(String.format("Response of URL %s is null.", url));
 	}
 
-	private HttpResponse execute(HttpRequestBase httpRequestBase) throws Exception {
-		HttpResponse response;
-		try {
-			httpRequestBase.setHeader("Connection", "close");
-			response = httpClient.execute(httpRequestBase);
+	private void executeWithoutResponseBody(HttpRequestBase httpRequestBase, int... expectedStatusCodes) {
+		try (CloseableHttpResponse response = httpClient.execute(httpRequestBase)) {
 			int httpCode = response.getStatusLine().getStatusCode();
-			if (httpCode != HttpStatus.SC_OK) {
-				String msg = String.format("http execute failed,status code is %d", httpCode);
+			if (!isExpectedStatus(httpCode, expectedStatusCodes)) {
+				String body = response.getEntity() == null ? "" : EntityUtils.toString(response.getEntity(), Consts.UTF_8);
+				String msg = String.format("http execute failed,status code is %d, response: %s", httpCode, body);
 				throw new RuntimeException(msg);
 			}
-			return response;
+			EntityUtils.consumeQuietly(response.getEntity());
 		} catch (Exception e) {
 			httpRequestBase.abort();
-			throw e;
+			throw new RuntimeException(e);
 		}
+	}
+
+	private String executeForString(HttpRequestBase httpRequestBase, int... expectedStatusCodes) {
+		try (CloseableHttpResponse response = httpClient.execute(httpRequestBase)) {
+			int httpCode = response.getStatusLine().getStatusCode();
+			HttpEntity entity = response.getEntity();
+			String body = entity == null ? "" : EntityUtils.toString(entity, Consts.UTF_8);
+			if (!isExpectedStatus(httpCode, expectedStatusCodes)) {
+				String msg = String.format("http execute failed,status code is %d, response: %s", httpCode, body);
+				throw new RuntimeException(msg);
+			}
+			return body;
+		} catch (Exception e) {
+			httpRequestBase.abort();
+			throw new RuntimeException(e);
+		}
+	}
+
+	private boolean isExpectedStatus(int statusCode, int... expectedStatusCodes) {
+		for (int expectedStatusCode : expectedStatusCodes) {
+			if (statusCode == expectedStatusCode) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public synchronized void close() {
