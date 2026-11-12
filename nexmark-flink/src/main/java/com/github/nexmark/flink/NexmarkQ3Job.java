@@ -89,6 +89,8 @@ import java.time.Instant;
  *   --key-dist uniform|zipf  How sellers are drawn from the working set (default uniform)
  *   --zipf-s 0.99          Zipf exponent for --key-dist zipf (larger = more skew)
  *   --lookup-latency true  Record per-lookup async state latency (q3LookupLatencyUs histogram)
+ *   --join-placement colocated|remote  remote puts the join in its own slot sharing group, i.e. on a
+ *                          different TaskManager from the source (needs 1 slot per TaskManager)
  *   --savepoint-persons N  Optional: Person count in the restored savepoint. In measure mode the
  *                          job fails fast if --working-set exceeds it
  * </pre>
@@ -119,6 +121,12 @@ public class NexmarkQ3Job {
         String  keyDist       = params.get("key-dist", "uniform").toLowerCase();
         double  zipfS         = params.getDouble("zipf-s", 0.99);
         boolean recordLatency = params.getBoolean("lookup-latency", true);
+        String  joinPlacement = params.get("join-placement", "colocated").toLowerCase();
+        if (!joinPlacement.equals("colocated") && !joinPlacement.equals("remote")) {
+            throw new IllegalArgumentException(
+                    "--join-placement must be 'colocated' or 'remote', got '" + params.get("join-placement") + "'");
+        }
+        boolean remoteJoin = joinPlacement.equals("remote");
 
         // -- Argument validation (fail before submitting a job that would be invalid) --------
         int totalProp = personProp + auctionProp + bidProp;
@@ -189,6 +197,9 @@ public class NexmarkQ3Job {
                         cover[0], cover[1], cover[2], domain);
             }
         }
+        System.out.printf("  join placement  : %s%n", remoteJoin
+                ? "remote (own slot sharing group: a different TaskManager from the source, so the shuffle crosses the network)"
+                : "colocated (shares a slot with the source: one TaskManager, no network shuffle)");
         System.out.printf("  lookup latency  : %s%n",
                 recordLatency ? "recorded (q3LookupLatencyUs histogram)" : "off");
         if (hotSellers != 1) {
@@ -309,7 +320,7 @@ public class NexmarkQ3Job {
                        .process(new Q3JoinFunction(String.format(
                                "phase=%s workingSet=%d events=%d parallelism=%d proportions=%d:%d:%d "
                                        + "hotSellers=%d personAvgSize=%d compressible=%s tps=%s savepointPersons=%d "
-                                       + "keyDist=%s%s",
+                                       + "keyDist=%s%s joinPlacement=" + joinPlacement,
                                phase, workingSet, numEvents, parallelism, personProp, auctionProp,
                                bidProp, hotSellers, personAvgSize, compressible,
                                tpsArg > 0 ? tpsArg : "max", savepointPersons,
@@ -319,6 +330,15 @@ public class NexmarkQ3Job {
                        .name("Q3 Join (person - auction)")
                        .uid("q3-join");
 
+        if (remoteJoin) {
+            // Tasks in different slot sharing groups cannot share a slot. With one slot per TaskManager
+            // the join's slot is therefore on a different TaskManager (a different machine) from the
+            // source's, so everything between the Extract operators and the join crosses the network.
+            // The Blackhole sink below inherits this group. Operator uids are unchanged, so savepoints
+            // taken without this option restore as before.
+            result = result.slotSharingGroup("q3-join");
+        }
+
         // -- Sink: blackhole (discard) -------------------------------------
         result.sinkTo(new DiscardingSink<>())
               .name("Blackhole Sink")
@@ -327,7 +347,8 @@ public class NexmarkQ3Job {
         System.out.println("Submitting job to cluster...");
         env.execute("Nexmark Q3 Java  phase=" + (measure ? "measure" : "build")
                 + "  ws=" + workingSet + "  events=" + numEvents
-                + (keyDist.equals("zipf") ? "  zipf=" + zipfS : ""));
+                + (keyDist.equals("zipf") ? "  zipf=" + zipfS : "")
+                + (remoteJoin ? "  join=remote" : ""));
     }
 
     // =========================================================================
