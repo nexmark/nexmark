@@ -19,6 +19,7 @@
 package com.github.nexmark.flink;
 
 import com.github.nexmark.flink.generator.GeneratorConfig;
+import com.github.nexmark.flink.generator.ZipfSampler;
 import com.github.nexmark.flink.model.Auction;
 import com.github.nexmark.flink.model.Event;
 import com.github.nexmark.flink.model.Person;
@@ -79,6 +80,8 @@ import java.time.Instant;
  *   --person-proportion / --auction-proportion / --bid-proportion
  *   --person-avg-size 200  Bytes of padding per Person - inflate to grow per-key state
  *   --tps 0                Target events/s across all generators; 0 = maximum speed
+ *   --key-dist uniform|zipf  How sellers are drawn from the working set (default uniform)
+ *   --zipf-s 0.99          Zipf exponent for --key-dist zipf (larger = more skew)
  *   --savepoint-persons N  Optional: Person count in the restored savepoint. In measure mode the
  *                          job fails fast if --working-set exceeds it
  * </pre>
@@ -106,6 +109,8 @@ public class NexmarkQ3Job {
         boolean measure       = phase.equals("measure");
         long    savepointPersons = params.getLong("savepoint-persons", 0L);   // optional guard
         int     tpsArg        = params.getInt("tps", 0);
+        String  keyDist       = params.get("key-dist", "uniform").toLowerCase();
+        double  zipfS         = params.getDouble("zipf-s", 0.99);
 
         // -- Argument validation (fail before submitting a job that would be invalid) --------
         int totalProp = personProp + auctionProp + bidProp;
@@ -118,6 +123,20 @@ public class NexmarkQ3Job {
         }
         if (tpsArg < 0) {
             throw new IllegalArgumentException("--tps must be >= 0 (0 = maximum emit speed)");
+        }
+        if (!keyDist.equals("uniform") && !keyDist.equals("zipf")) {
+            throw new IllegalArgumentException(
+                    "--key-dist must be 'uniform' or 'zipf', got '" + params.get("key-dist") + "'");
+        }
+        if (keyDist.equals("zipf")) {
+            if (!(zipfS > 0)) {
+                throw new IllegalArgumentException("--zipf-s must be > 0, got " + zipfS);
+            }
+            if (hotSellers != 1) {
+                // The hot-seller branch of AuctionGenerator bypasses the key-distribution code.
+                throw new IllegalArgumentException(
+                        "--key-dist zipf requires --hot-sellers-ratio 1 (got " + hotSellers + ")");
+            }
         }
         // Sellers are the first working-set Persons that exist. Each must already exist in the savepoint.
         if (workingSet < 1) {
@@ -151,6 +170,17 @@ public class NexmarkQ3Job {
             System.out.printf("  expected persons: %s%n",
                     expectedPersons >= 0 ? String.format("%,d", expectedPersons) : "unbounded (events=0)");
         }
+        System.out.printf("  key-dist        : %s%s%n", keyDist,
+                keyDist.equals("zipf") ? " (s=" + zipfS + ")" : " (uniform over the key range)");
+        if (keyDist.equals("zipf")) {
+            long domain = workingSet;
+            if (domain <= 50_000_000L) {
+                long[] cover = ZipfSampler.coverage(domain, zipfS, 0.5, 0.9, 0.99);
+                System.out.printf("  zipf coverage   : top %,d keys get 50%% of lookups, %,d get 90%%, %,d get 99%% "
+                        + "(of %,d keys; the hot set is far smaller than --working-set)%n",
+                        cover[0], cover[1], cover[2], domain);
+            }
+        }
         if (hotSellers != 1) {
             System.out.println("  WARNING: --hot-sellers-ratio != 1; sellers no longer come from the "
                     + "fixed working-set window, so --working-set does not bound the key range.");
@@ -182,8 +212,8 @@ public class NexmarkQ3Job {
         nexmarkConf.hotSellersRatio    = hotSellers;
         nexmarkConf.avgPersonByteSize  = personAvgSize;
         nexmarkConf.compressibleExtra  = compressible;
-        nexmarkConf.firstEventRate     = 10_000;
-        nexmarkConf.nextEventRate      = 10_000;
+        nexmarkConf.keyDistribution    = keyDist;
+        nexmarkConf.zipfExponent       = zipfS;
         nexmarkConf.numEventGenerators = parallelism;
 
         GeneratorConfig generatorConfig = new GeneratorConfig(
@@ -278,7 +308,8 @@ public class NexmarkQ3Job {
 
         System.out.println("Submitting job to cluster...");
         env.execute("Nexmark Q3 Java  phase=" + (measure ? "measure" : "build")
-                + "  ws=" + workingSet + "  events=" + numEvents);
+                + "  ws=" + workingSet + "  events=" + numEvents
+                + (keyDist.equals("zipf") ? "  zipf=" + zipfS : ""));
     }
 
     // =========================================================================

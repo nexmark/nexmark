@@ -55,6 +55,8 @@ The job reads options with Flink's `ParameterTool`. These are the defaults in
 | `--compressible-extra` | `compressible`; `true` | Controls whether generated Person padding is compressible. Passed as `compressibleExtra`; it can affect the stored state's compression and cache footprint. |
 | `--phase` | `phase`; default `build` | `build` or `measure` (case insensitive). Any other value is rejected at startup. Selects Person filtering, the source UID, and the job name. |
 | `--tps` | `tps`; `0` | Target total events/second across all generators. `0` (default) emits at maximum speed; negative values are rejected. Achieved throughput can be lower. |
+| `--key-dist` | `keyDist`; `uniform` | How sellers are drawn from the first `working-set` Persons that exist. `uniform` is the stock behavior and the worst case for caching. `zipf` makes a few keys receive most lookups, as in real workloads. Requires `--hot-sellers-ratio 1`. The key range is unchanged, so the same savepoint stays valid. |
+| `--zipf-s` | `zipfS`; `0.99` | Zipf exponent for `--key-dist zipf`. Larger means more skew; `0.99` is the YCSB default. Must be positive. |
 | `--savepoint-persons` | `savepointPersons`; `0` | Optional guard for `--phase measure`: the number of Persons in the restored savepoint. If `--working-set` exceeds it, the job fails at startup instead of silently dropping auctions for missing sellers. `0` disables the check. |
 
 The default proportions `10:4:36` mean 20% Person, 8% Auction, and 72% Bid
@@ -68,6 +70,13 @@ all-zero proportions, `--phase measure` with `--auction-proportion 0`, a negativ
 and (when `--savepoint-persons` is given) a working set larger than the savepoint. The
 startup banner prints the expected Person count for a build run, and warns when
 `--hot-sellers-ratio` is not 1.
+
+**Key skew.** With `--key-dist zipf`, `--working-set` is the size of the key universe, not the
+effective working set: the startup banner prints how many keys receive 50%, 90% and 99% of lookups,
+and that hot set is far smaller. Hot keys are scattered across the id space (a bijective scramble of
+rank to id), so they do not sit next to each other in the sorted SST files, which would flatter the
+block cache. Compare a zipf run with a uniform run at the same `--working-set` to see how much of the
+cost comes from the access pattern.
 
 ## Example invocation
 

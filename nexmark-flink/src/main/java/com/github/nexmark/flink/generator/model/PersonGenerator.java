@@ -92,7 +92,11 @@ public class PersonGenerator {
     // nothing (measured: 0.0202% against 0.0200% predicted for n = 10 000). Draw from the range
     // where Persons actually exist instead.
     long domain = config.getNumActivePeople();
-    long draw = LongGenerator.nextLong(random, domain);
+    long draw = config.isZipfKeyDistribution()
+        // Skewed access: a few ids receive most draws. Domain and key range are unchanged, only the
+        // distribution over them differs, so the same savepoint remains valid.
+        ? config.getZipfSampler(domain).sampleId(random)
+        : LongGenerator.nextLong(random, domain);
     return FIRST_PERSON_BASE0 + draw;
   }
 

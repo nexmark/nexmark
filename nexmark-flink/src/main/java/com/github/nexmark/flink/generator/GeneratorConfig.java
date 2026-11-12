@@ -204,6 +204,23 @@ public class GeneratorConfig implements Serializable {
     return configuration.compressibleExtra;
   }
 
+  /** True when seller/bidder ids follow a Zipf distribution instead of a uniform one. */
+  public boolean isZipfKeyDistribution() {
+    return "zipf".equalsIgnoreCase(configuration.keyDistribution);
+  }
+
+  private transient ZipfSampler zipfSampler;
+
+  /** Lazily built sampler over {@code domainSize} ids (not serialized; rebuilt after restore). */
+  public ZipfSampler getZipfSampler(long domainSize) {
+    ZipfSampler sampler = zipfSampler;
+    if (sampler == null || sampler.size() != domainSize) {
+      sampler = new ZipfSampler(domainSize, configuration.zipfExponent);
+      zipfSampler = sampler;
+    }
+    return sampler;
+  }
+
   public int getNumActivePeople() {
     return configuration.numActivePeople;
   }
