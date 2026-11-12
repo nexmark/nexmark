@@ -65,8 +65,11 @@ import java.time.Instant;
  *       across the ForSt local cache.
  * </ul>
  *
- * <p>Async state access ({@code// .enableAsyncState()} + v2 state API) matches the paper's
- * "Flink 2.0-HDFS-async" execution model.
+ * <p>This is the synchronous-state baseline of {@code NexmarkQ3Job}: the same job on the classic
+ * state API ({@code ValueState.value()} blocks the operator thread until the read returns), with
+ * no {@code enableAsyncState()}. Run it on the RocksDB state backend to compare against ForSt with
+ * async state access. It keeps the argument set of the original job and none of the later options
+ * (key distribution, lookup metrics, join placement).
  *
  * <p>CLI flags:
  * <pre>
@@ -79,7 +82,7 @@ import java.time.Instant;
  *   --person-avg-size 200  Bytes of padding per Person - inflate to grow per-key state
  * </pre>
  */
-public class NexmarkQ3Job {
+public class NexmarkQ3SyncJob {
 
     public static void main(String[] args) throws Exception {
         ParameterTool params  = ParameterTool.fromArgs(args);
@@ -225,7 +228,7 @@ public class NexmarkQ3Job {
               .uid("blackhole-sink");
 
         System.out.println("Submitting job to cluster...");
-        env.execute("Nexmark Q3 Java  phase=" + (measure ? "measure" : "build")
+        env.execute("Nexmark Q3 Java (sync state)  phase=" + (measure ? "measure" : "build")
                 + "  ws=" + workingSet + "  events=" + numEvents);
     }
 
