@@ -62,7 +62,7 @@ public class NexmarkSource implements Source<RowData,
     private final TypeInformation<RowData> outputType;
     private final RowDataEventDeserializer deserializer;
 
-    NexmarkSource(GeneratorConfig config, TypeInformation<RowData> outputType) {
+    public NexmarkSource(GeneratorConfig config, TypeInformation<RowData> outputType) {
         this.config = config;
         this.outputType = outputType;
         this.deserializer = new RowDataEventDeserializer();

@@ -1,0 +1,473 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.github.nexmark.flink;
+
+import com.github.nexmark.flink.generator.GeneratorConfig;
+import com.github.nexmark.flink.generator.ZipfSampler;
+import com.github.nexmark.flink.model.Auction;
+import com.github.nexmark.flink.model.Event;
+import com.github.nexmark.flink.metric.RollingLatencyHistogram;
+import com.github.nexmark.flink.model.Person;
+import com.github.nexmark.flink.source.NexmarkSource;
+
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.OpenContext;
+import org.apache.flink.api.common.state.v2.ListState;
+import org.apache.flink.api.common.state.v2.ListStateDescriptor;
+import org.apache.flink.api.common.state.v2.ValueState;
+import org.apache.flink.api.common.state.v2.ValueStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.TupleTypeInfo;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction;
+import org.apache.flink.streaming.api.functions.sink.v2.DiscardingSink;
+import org.apache.flink.table.data.RowData;
+import org.apache.flink.core.state.StateFutureUtils;
+import org.apache.flink.metrics.Counter;
+import org.apache.flink.metrics.Histogram;
+import org.apache.flink.util.Collector;
+import org.apache.flink.util.ParameterTool;
+import org.apache.flink.util.function.ThrowingConsumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Instant;
+
+/**
+ * Nexmark Query 3 - Local Item Suggestion (Java DataStream) - working-set / cache experiment build.
+ *
+ * <p>Base query: {@code auction A INNER JOIN person P ON A.seller = P.id}. The Q3 WHERE filters
+ * ({@code A.category = 10}, {@code P.state IN ('OR','ID','CA')}) are intentionally REMOVED so that
+ * every auction probes {@code personState} and state accumulates as fast as possible - this job is
+ * an instrument, not a faithful Q3.
+ *
+ * <p>Two phases:
+ * <ul>
+ *   <li>{@code --phase build}   - generate persons, accumulate {@code personState} (the "address
+ *       space"), then take a savepoint.
+ *   <li>{@code --phase measure} - restore that savepoint, DROP all incoming Person events so
+ *       {@code personState} is frozen, stream only auctions; each auction does one async
+ *       {@code personState} point-read. Sweep {@code --working-set} to move the working set
+ *       across the ForSt local cache.
+ * </ul>
+ *
+ * <p>Async state access ({@code.enableAsyncState()} + v2 state API) matches the paper's
+ * "Flink 2.0-HDFS-async" execution model.
+ *
+ * <p>CLI flags:
+ * <pre>
+ *   --events 500000        Total events to generate (ceiling; snapshot earlier in build phase)
+ *   --working-set 1000     Fixed number of active seller keys  = the working set
+ *   --parallelism 1        Job parallelism (keep low so per-subtask cache/state ratio is meaningful)
+ *   --phase build|measure  build = accumulate state; measure = frozen state, auctions only
+ *   --source-keep-alive true  Keep a bounded source running until a build savepoint is taken
+ *   --hot-sellers-ratio 1  MUST be 1 so every seller goes through the fixed active window
+ *   --person-proportion / --auction-proportion / --bid-proportion
+ *   --person-avg-size 200  Bytes of padding per Person - inflate to grow per-key state
+ *   --tps 0                Target events/s across all generators; 0 = maximum speed
+ *   --key-dist uniform|zipf  How sellers are drawn from the working set (default uniform)
+ *   --zipf-s 0.99          Zipf exponent for --key-dist zipf (larger = more skew)
+ *   --lookup-latency true  Record per-lookup async state latency (q3LookupLatencyUs histogram)
+ *   --join-placement colocated|remote  remote puts the join in its own slot sharing group, i.e. on a
+ *                          different TaskManager from the source (needs 1 slot per TaskManager)
+ *   --savepoint-persons N  Optional: Person count in the restored savepoint. In measure mode the
+ *                          job fails fast if --working-set exceeds it
+ * </pre>
+ */
+public class NexmarkQ3Job {
+
+    public static void main(String[] args) throws Exception {
+        ParameterTool params  = ParameterTool.fromArgs(args);
+        long    numEvents     = params.getLong("events", 500_000L);
+        int     workingSet    = params.getInt("working-set", 1000);
+        int     parallelism   = params.getInt("parallelism", 1);
+        int     personProp    = params.getInt("person-proportion", 10);
+        int     auctionProp   = params.getInt("auction-proportion", 4);
+        int     bidProp       = params.getInt("bid-proportion", 36);
+        int     hotSellers    = params.getInt("hot-sellers-ratio", 1);
+        int     personAvgSize = params.getInt("person-avg-size", 200);
+        boolean compressible  = params.getBoolean("compressible-extra", true);
+        String  phase        = params.get("phase", "build").toLowerCase();
+        if (!phase.equals("build") && !phase.equals("measure")) {
+            // Previously any value other than "measure" silently selected build, so a typo such as
+            // "--phase mesure" would start a build job and add persons to a restored savepoint.
+            throw new IllegalArgumentException(
+                    "--phase must be 'build' or 'measure', got '" + params.get("phase") + "'");
+        }
+        boolean measure       = phase.equals("measure");
+        long    savepointPersons = params.getLong("savepoint-persons", 0L);   // optional guard
+        int     tpsArg        = params.getInt("tps", 0);
+        String  keyDist       = params.get("key-dist", "uniform").toLowerCase();
+        double  zipfS         = params.getDouble("zipf-s", 0.99);
+        boolean recordLatency = params.getBoolean("lookup-latency", true);
+        String  joinPlacement = params.get("join-placement", "colocated").toLowerCase();
+        if (!joinPlacement.equals("colocated") && !joinPlacement.equals("remote")) {
+            throw new IllegalArgumentException(
+                    "--join-placement must be 'colocated' or 'remote', got '" + params.get("join-placement") + "'");
+        }
+        boolean remoteJoin = joinPlacement.equals("remote");
+
+        // -- Argument validation (fail before submitting a job that would be invalid) --------
+        int totalProp = personProp + auctionProp + bidProp;
+        if (personProp < 0 || auctionProp < 0 || bidProp < 0 || totalProp <= 0) {
+            throw new IllegalArgumentException("proportions must be non-negative and not all zero");
+        }
+        if (measure && auctionProp == 0) {
+            throw new IllegalArgumentException(
+                    "--phase measure needs --auction-proportion > 0: only auctions probe state");
+        }
+        if (tpsArg < 0) {
+            throw new IllegalArgumentException("--tps must be >= 0 (0 = maximum emit speed)");
+        }
+        if (!keyDist.equals("uniform") && !keyDist.equals("zipf")) {
+            throw new IllegalArgumentException(
+                    "--key-dist must be 'uniform' or 'zipf', got '" + params.get("key-dist") + "'");
+        }
+        if (keyDist.equals("zipf")) {
+            if (!(zipfS > 0)) {
+                throw new IllegalArgumentException("--zipf-s must be > 0, got " + zipfS);
+            }
+            if (hotSellers != 1) {
+                // The hot-seller branch of AuctionGenerator bypasses the key-distribution code.
+                throw new IllegalArgumentException(
+                        "--key-dist zipf requires --hot-sellers-ratio 1 (got " + hotSellers + ")");
+            }
+        }
+        // Sellers are the first working-set Persons that exist. Each must already exist in the savepoint.
+        if (workingSet < 1) {
+            throw new IllegalArgumentException("--working-set must be >= 1, got " + workingSet);
+        }
+        if (measure && savepointPersons > 0 && workingSet > savepointPersons) {
+            throw new IllegalArgumentException(
+                    "--working-set " + workingSet + " exceeds --savepoint-persons "
+                            + savepointPersons + ": some sellers would be missing from state");
+        }
+        // Expected Person count for a build run (exact when events is a multiple of the proportion sum)
+        long expectedPersons = numEvents > 0 ? numEvents * personProp / totalProp : -1L;
+
+        System.out.println("=======================================================");
+        System.out.println("  Nexmark Q3 - Java DataStream (working-set experiment)");
+        System.out.println("=======================================================");
+        System.out.printf("  phase          : %s%n", measure ? "measure (persons dropped)" : "build");
+        System.out.printf("  events         : %,d%n", numEvents);
+        System.out.printf("  working-set     : %d active seller keys%n", workingSet);
+        System.out.printf("  parallelism     : %d%n", parallelism);
+        System.out.printf("  proportions     : person=%d auction=%d bid=%d%n", personProp, auctionProp, bidProp);
+        System.out.printf("  hot-sellers-ratio: %d%n", hotSellers);
+        System.out.printf("  person-avg-size : %d bytes%n", personAvgSize);
+        System.out.printf("  compressible-extra: %s%n", compressible);
+        System.out.printf("  tps             : %s%n", tpsArg > 0 ? String.valueOf(tpsArg) : "max");
+        if (measure) {
+            System.out.printf("  sellers probed  : ids [0, %d) (= working-set)%n", (long) workingSet);
+            System.out.printf("  savepoint-persons: %s%n",
+                    savepointPersons > 0 ? String.valueOf(savepointPersons) : "not given (no bounds check)");
+        } else {
+            System.out.printf("  expected persons: %s%n",
+                    expectedPersons >= 0 ? String.format("%,d", expectedPersons) : "unbounded (events=0)");
+        }
+        System.out.printf("  key-dist        : %s%s%n", keyDist,
+                keyDist.equals("zipf") ? " (s=" + zipfS + ")" : " (uniform over the key range)");
+        if (keyDist.equals("zipf")) {
+            long domain = workingSet;
+            if (domain <= 50_000_000L) {
+                long[] cover = ZipfSampler.coverage(domain, zipfS, 0.5, 0.9, 0.99);
+                System.out.printf("  zipf coverage   : top %,d keys get 50%% of lookups, %,d get 90%%, %,d get 99%% "
+                        + "(of %,d keys; the hot set is far smaller than --working-set)%n",
+                        cover[0], cover[1], cover[2], domain);
+            }
+        }
+        System.out.printf("  join placement  : %s%n", remoteJoin
+                ? "remote (own slot sharing group: a different TaskManager from the source, so the shuffle crosses the network)"
+                : "colocated (shares a slot with the source: one TaskManager, no network shuffle)");
+        System.out.printf("  lookup latency  : %s%n",
+                recordLatency ? "recorded (q3LookupLatencyUs histogram)" : "off");
+        if (hotSellers != 1) {
+            System.out.println("  WARNING: --hot-sellers-ratio != 1; sellers no longer come from the "
+                    + "fixed working-set window, so --working-set does not bound the key range.");
+        }
+        System.out.println("=======================================================");
+
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setParallelism(parallelism);
+
+        // -- Nexmark generator config -----------------------------------------
+        NexmarkConfiguration nexmarkConf = new NexmarkConfiguration();
+        nexmarkConf.numEvents          = numEvents;
+        nexmarkConf.stopAtEvent        = -1L;
+        // Keep a bounded build source running after it emits its requested events,
+        // so a savepoint can include every generated Person before the job exits.
+        nexmarkConf.isSourceKeepAlive  = params.getBoolean("source-keep-alive", false);
+        int tps = tpsArg;
+        if (tps > 0) {
+            nexmarkConf.maxEmitSpeed = false;
+            nexmarkConf.firstEventRate = tps;
+            nexmarkConf.nextEventRate = tps;
+        } else {
+            nexmarkConf.maxEmitSpeed = true;   // fire as fast as possible
+        }
+        nexmarkConf.personProportion   = personProp;
+        nexmarkConf.auctionProportion  = auctionProp;
+        nexmarkConf.bidProportion      = bidProp;
+        nexmarkConf.numActivePeople    = workingSet;
+        nexmarkConf.hotSellersRatio    = hotSellers;
+        nexmarkConf.avgPersonByteSize  = personAvgSize;
+        nexmarkConf.compressibleExtra  = compressible;
+        nexmarkConf.keyDistribution    = keyDist;
+        nexmarkConf.zipfExponent       = zipfS;
+        nexmarkConf.numEventGenerators = parallelism;
+
+        GeneratorConfig generatorConfig = new GeneratorConfig(
+                nexmarkConf,
+                System.currentTimeMillis(),
+                1,
+                numEvents,
+                -1L,
+                1);
+
+        TypeInformation<RowData> rowDataType = TypeInformation.of(RowData.class);
+        NexmarkSource source = new NexmarkSource(generatorConfig, rowDataType);
+
+        // -- Source ----------------------------------------------------------
+        // In measure mode, use a different UID so the savepoint's source state
+        // (containing the build-phase GeneratorConfig with limited maxEvents) is
+        // NOT restored.  The source starts fresh with the CLI-provided config.
+        DataStream<RowData> events = env
+                .fromSource(source, WatermarkStrategy.noWatermarks(), "Nexmark Source")
+                .setParallelism(parallelism)
+                .uid(measure ? "nexmark-source-measure" : "nexmark-source");
+
+        // -- Extract Person (event_type == 0) -------------------------------
+        // In --phase measure every Person event is dropped here, before keyBy /
+        // processElement1, so personState stays frozen at the restored size.
+        // RowData layout (RowDataEventDeserializer):
+        //  [0] event_type (INT)
+        //  [1] person ROW(8):   id, name, emailAddress, creditCard, city, state, dateTime, extra
+        //  [2] auction ROW(10): id, itemName, description, initialBid, reserve, dateTime, expires, seller, category, extra
+        //  [3] bid ROW(7):      auction, bidder, price, channel, url, dateTime, extra
+        final boolean dropPersons = measure;
+        DataStream<Person> persons = events
+                .filter(row -> !dropPersons
+                        && row.getInt(0) == Event.Type.PERSON.value
+                        && !row.isNullAt(1))
+                .map(row -> {
+                    RowData p = row.getRow(1, 8);
+                    return new Person(
+                            p.getLong(0),
+                            p.getString(1).toString(),
+                            p.getString(2).toString(),
+                            p.getString(3).toString(),
+                            p.getString(4).toString(),
+                            p.getString(5).toString(),
+                            Instant.ofEpochMilli(p.getTimestamp(6, 3).getMillisecond()),
+                            p.getString(7).toString());
+                })
+                .returns(TypeInformation.of(Person.class))
+                .name("Extract Person")
+                .uid("extract-person");
+
+        // -- Extract Auction (event_type == 1) -----------------------------
+        // Category filter REMOVED: every auction enters the join and probes personState.
+        DataStream<Auction> auctions = events
+                .filter(row -> row.getInt(0) == Event.Type.AUCTION.value && !row.isNullAt(2))
+                .map(row -> {
+                    RowData a = row.getRow(2, 10);
+                    return new Auction(
+                            a.getLong(0),
+                            a.getString(1).toString(),
+                            a.getString(2).toString(),
+                            a.getLong(3),
+                            a.getLong(4),
+                            Instant.ofEpochMilli(a.getTimestamp(5, 3).getMillisecond()),
+                            Instant.ofEpochMilli(a.getTimestamp(6, 3).getMillisecond()),
+                            a.getLong(7),
+                            a.getLong(8),
+                            a.getString(9).toString());
+                })
+                .returns(TypeInformation.of(Auction.class))
+                .name("Extract Auction")
+                .uid("extract-auction");
+
+        // -- Q3 Join (async KeyedCoProcessFunction) -------------------------
+        // Both streams keyed by person.id / auction.seller; async state access.
+        TypeInformation<Tuple2<Long, Long>> resultType =
+                new TupleTypeInfo<>(Types.LONG, Types.LONG);
+
+        SingleOutputStreamOperator<Tuple2<Long, Long>> result =
+                persons.keyBy(p -> p.id)
+                       .connect(auctions.keyBy(a -> a.seller))
+                       .enableAsyncState()
+                       .process(new Q3JoinFunction(String.format(
+                               "phase=%s workingSet=%d events=%d parallelism=%d proportions=%d:%d:%d "
+                                       + "hotSellers=%d personAvgSize=%d compressible=%s tps=%s savepointPersons=%d "
+                                       + "keyDist=%s%s joinPlacement=" + joinPlacement,
+                               phase, workingSet, numEvents, parallelism, personProp, auctionProp,
+                               bidProp, hotSellers, personAvgSize, compressible,
+                               tpsArg > 0 ? tpsArg : "max", savepointPersons,
+                               keyDist, keyDist.equals("zipf") ? "(s=" + zipfS + ")" : ""),
+                               recordLatency))
+                       .returns(resultType)
+                       .name("Q3 Join (person - auction)")
+                       .uid("q3-join");
+
+        if (remoteJoin) {
+            // Tasks in different slot sharing groups cannot share a slot. With one slot per TaskManager
+            // the join's slot is therefore on a different TaskManager (a different machine) from the
+            // source's, so everything between the Extract operators and the join crosses the network.
+            // The Blackhole sink below inherits this group. Operator uids are unchanged, so savepoints
+            // taken without this option restore as before.
+            result = result.slotSharingGroup("q3-join");
+        }
+
+        // -- Sink: blackhole (discard) -------------------------------------
+        result.sinkTo(new DiscardingSink<>())
+              .name("Blackhole Sink")
+              .uid("blackhole-sink");
+
+        System.out.println("Submitting job to cluster...");
+        env.execute("Nexmark Q3 Java  phase=" + (measure ? "measure" : "build")
+                + "  ws=" + workingSet + "  events=" + numEvents
+                + (keyDist.equals("zipf") ? "  zipf=" + zipfS : "")
+                + (remoteJoin ? "  join=remote" : ""));
+    }
+
+    // =========================================================================
+    // Q3 Join Function - async state, clear-on-join
+    // =========================================================================
+
+    /**
+     * Stateful streaming join for the Q3 experiment.
+     *
+     * <p>Key = person.id (stream-1) = auction.seller (stream-2).
+     *
+     * <p>State:
+     * <ul>
+     *   <li>{@code personState}  - the Person for this key (the "table" side; never cleared;
+     *       frozen in the measure phase because Person events are dropped upstream).
+     *   <li>{@code auctionState} - clear-on-join buffer: holds an auction only while its seller
+     *       has not been seen yet; drained + cleared once the Person arrives; empty in the
+     *       measure phase (every seller is already in personState).
+     * </ul>
+     */
+    public static class Q3JoinFunction
+            extends KeyedCoProcessFunction<Long, Person, Auction, Tuple2<Long, Long>> {
+
+        private static final long serialVersionUID = 2L;
+        private static final Logger LOG = LoggerFactory.getLogger(Q3JoinFunction.class);
+
+        private transient ValueState<Person> personState;
+        private transient ListState<Auction> auctionState;
+
+        // Lookup accounting (exported by the metric reporter as operator metrics).
+        // In a valid measure run every seller is already in personState, so q3Misses must stay 0.
+        // A non-zero value means the run is invalid, e.g. --working-set exceeds the number of
+        // Persons in the restored savepoint, the savepoint is incomplete, or --hot-sellers-ratio != 1.
+        private transient Counter lookups;
+        private transient Counter hits;
+        private transient Counter misses;
+        private transient boolean missLogged;
+
+        /** Effective job configuration, logged by every subtask so it is visible in TaskManager logs. */
+        private final String configSummary;
+        private final boolean recordLatency;
+
+        /**
+         * Time from issuing {@code personState.asyncValue()} until its future completes, in
+         * microseconds. It is the latency the task sees for an async state read, which includes
+         * time queued behind other in-flight state requests, not only the storage access itself.
+         */
+        private transient Histogram lookupLatencyUs;
+
+        public Q3JoinFunction(String configSummary, boolean recordLatency) {
+            this.configSummary = configSummary;
+            this.recordLatency = recordLatency;
+        }
+
+        @Override
+        public void open(OpenContext openContext) throws Exception {
+            personState = getRuntimeContext().getState(
+                    new ValueStateDescriptor<>("person", TypeInformation.of(Person.class)));
+            auctionState = getRuntimeContext().getListState(
+                    new ListStateDescriptor<>("auctions", TypeInformation.of(Auction.class)));
+            LOG.info("Q3JoinFunction subtask {}/{} starting: {}",
+                    getRuntimeContext().getTaskInfo().getIndexOfThisSubtask() + 1,
+                    getRuntimeContext().getTaskInfo().getNumberOfParallelSubtasks(), configSummary);
+            lookups = getRuntimeContext().getMetricGroup().counter("q3Lookups");
+            hits    = getRuntimeContext().getMetricGroup().counter("q3Hits");
+            misses  = getRuntimeContext().getMetricGroup().counter("q3Misses");
+            if (recordLatency) {
+                lookupLatencyUs = getRuntimeContext().getMetricGroup()
+                        .histogram("q3LookupLatencyUs", new RollingLatencyHistogram());
+            }
+        }
+
+        /**
+         * Stream-1: Person arrives (build phase only).
+         * Store it, drain any buffered auctions for this key, then clear the buffer.
+         */
+        @Override
+        public void processElement1(Person person, Context ctx,
+                                    Collector<Tuple2<Long, Long>> out) throws Exception {
+            ThrowingConsumer<Auction, Exception> emit =
+                    a -> out.collect(Tuple2.of(person.id, a.id));
+            personState.asyncUpdate(person)
+                    .thenCompose(v -> auctionState.asyncGet())
+                    .thenCompose(it -> it == null
+                            ? StateFutureUtils.completedVoidFuture()
+                            : it.onNext(emit))
+                    .thenAccept(v -> auctionState.asyncClear());
+        }
+
+        /**
+         * Stream-2: Auction arrives.
+         * If the seller is already known -> join now, emit result.
+         * If not -> drop silently.  In measure mode personState is frozen, so
+         * buffering would cause an unbounded write leak that pollutes the cache.
+         */
+        @Override
+        public void processElement2(Auction auction, Context ctx,
+                                    Collector<Tuple2<Long, Long>> out) throws Exception {
+            final long startNanos = recordLatency ? System.nanoTime() : 0L;
+            personState.asyncValue().thenAccept(p -> {
+                if (recordLatency) {
+                    lookupLatencyUs.update((System.nanoTime() - startNanos) / 1_000L);
+                }
+                lookups.inc();
+                if (p != null) {
+                    hits.inc();
+                    out.collect(Tuple2.of(p.id, auction.id));
+                } else {
+                    // Seller unknown: drop the auction (no state write). Expected never to happen
+                    // in a valid measure run, so count it and warn once per subtask.
+                    misses.inc();
+                    if (!missLogged) {
+                        missLogged = true;
+                        LOG.warn("Seller {} not found in personState (auction {}). The working set "
+                                + "likely exceeds the savepoint's Person count, or the savepoint is "
+                                + "incomplete. See metric q3Misses.", auction.seller, auction.id);
+                    }
+                }
+            });
+        }       
+    }
+}

@@ -143,6 +143,19 @@ public class NexmarkSourceOptions {
 		.defaultValue(4);
 
 	/**
+	 * Size of the sliding "active people" window that person/auction ids are drawn from.
+	 * This is the controllable "working set size" for keyed joins on seller/person id (e.g. Q3):
+	 * at any point in time, only this many distinct person ids are eligible to appear as
+	 * auction.seller or person.id.
+	 *
+	 * @see NexmarkConfiguration#numActivePeople
+	 */
+	public static final ConfigOption<Integer> NUM_ACTIVE_PEOPLE = ConfigOptions
+		.key("person.num-active")
+		.intType()
+		.defaultValue(1000);
+
+	/**
 	 * @see NexmarkConfiguration#numEvents
 	 */
 	public static final ConfigOption<Long> EVENTS_NUM = ConfigOptions
@@ -190,6 +203,7 @@ public class NexmarkSourceOptions {
 		nexmarkConf.hotAuctionRatio = config.get(BID_HOT_RATIO_AUCTIONS);
 		nexmarkConf.hotBiddersRatio = config.get(BID_HOT_RATIO_BIDDERS);
 		nexmarkConf.hotSellersRatio = config.get(AUCTION_HOT_RATIO_SELLERS);
+		nexmarkConf.numActivePeople = config.get(NUM_ACTIVE_PEOPLE);
 		nexmarkConf.numEvents = config.get(EVENTS_NUM);
 		nexmarkConf.isSourceKeepAlive = config.get(KEEP_ALIVE);
 		nexmarkConf.stopAtEvent = config.get(STOP_AT);

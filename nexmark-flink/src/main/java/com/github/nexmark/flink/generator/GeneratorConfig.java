@@ -29,6 +29,8 @@ import java.util.Objects;
 /** Parameters controlling how {@link NexmarkGenerator} synthesizes {@link Event} elements. */
 public class GeneratorConfig implements Serializable {
 
+  private static final long serialVersionUID = 3526283620736646128L;
+
   /**
    * We start the ids at specific values to help ensure the queries find a match even on small
    * synthesized dataset sizes.
@@ -196,6 +198,27 @@ public class GeneratorConfig implements Serializable {
 
   public int getAvgPersonByteSize() {
     return configuration.avgPersonByteSize;
+  }
+
+  public boolean getCompressibleExtra() {
+    return configuration.compressibleExtra;
+  }
+
+  /** True when seller/bidder ids follow a Zipf distribution instead of a uniform one. */
+  public boolean isZipfKeyDistribution() {
+    return "zipf".equalsIgnoreCase(configuration.keyDistribution);
+  }
+
+  private transient ZipfSampler zipfSampler;
+
+  /** Lazily built sampler over {@code domainSize} ids (not serialized; rebuilt after restore). */
+  public ZipfSampler getZipfSampler(long domainSize) {
+    ZipfSampler sampler = zipfSampler;
+    if (sampler == null || sampler.size() != domainSize) {
+      sampler = new ZipfSampler(domainSize, configuration.zipfExponent);
+      zipfSampler = sampler;
+    }
+    return sampler;
   }
 
   public int getNumActivePeople() {

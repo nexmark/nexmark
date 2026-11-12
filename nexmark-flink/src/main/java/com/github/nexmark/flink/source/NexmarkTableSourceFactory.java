@@ -83,6 +83,7 @@ public class NexmarkTableSourceFactory implements DynamicTableSourceFactory {
 		sets.add(NexmarkSourceOptions.BID_HOT_RATIO_AUCTIONS);
 		sets.add(NexmarkSourceOptions.BID_HOT_RATIO_BIDDERS);
 		sets.add(NexmarkSourceOptions.AUCTION_HOT_RATIO_SELLERS);
+		sets.add(NexmarkSourceOptions.NUM_ACTIVE_PEOPLE);
 		sets.add(NexmarkSourceOptions.EVENTS_NUM);
 		sets.add(NexmarkSourceOptions.KEEP_ALIVE);
 		sets.add(NexmarkSourceOptions.STOP_AT);

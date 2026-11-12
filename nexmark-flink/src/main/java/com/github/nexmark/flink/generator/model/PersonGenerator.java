@@ -30,9 +30,6 @@ import static com.github.nexmark.flink.generator.model.StringsGenerator.nextStri
 
 /** Generates people. */
 public class PersonGenerator {
-  /** Number of yet-to-be-created people and auction ids allowed. */
-  private static final int PERSON_ID_LEAD = 10;
-
   /**
    * Keep the number of states small so that the example queries will find results even with a small
    * batch of events.
@@ -64,22 +61,50 @@ public class PersonGenerator {
     String state = nextUSState(random);
     int currentSize =
         8 + name.length() + email.length() + creditCard.length() + city.length() + state.length();
-    String extra = nextExtra(random, currentSize, config.getAvgPersonByteSize());
+    String extra = nextExtra(
+        random, currentSize, config.getAvgPersonByteSize(), config.getCompressibleExtra());
     return new Person(id, name, email, creditCard, city, state, Instant.ofEpochMilli(timestamp), extra);
   }
 
   /** Return a random person id (base 0). */
   public static long nextBase0PersonId(long eventId, SplittableRandom random, GeneratorConfig config) {
-    // Choose a random person from any of the 'active' people, plus a few 'leads'.
-    // By limiting to 'active' we ensure the density of bids or auctions per person
-    // does not decrease over time for long running jobs.
-    // By choosing a person id ahead of the last valid person id we will make
-    // newPerson and newAuction events appear to have been swapped in time.
-    long numPeople = lastBase0PersonId(config, eventId) + 1;
-    long activePeople = Math.min(numPeople, config.getNumActivePeople());
-    long n = LongGenerator.nextLong(random, activePeople + PERSON_ID_LEAD);
-    return numPeople - activePeople + n;
+    // EXPERIMENT: fixed active window.
+    // Draw the seller/bidder uniformly from the fixed prefix of numActivePeople Persons, independent of
+    // how many persons have been generated so far. This pins the set of join keys to a stable
+    // prefix for the whole run and across savepoint restores, and it still works when person
+    // generation is disabled (personProportion = 0) in the measurement phase.
+    //
+    // Original upstream (sliding window) behaviour, kept for reference:
+    //   long numPeople = lastBase0PersonId(config, eventId) + 1;
+    //   long activePeople = Math.min(numPeople, config.getNumActivePeople());
+    //   long n = LongGenerator.nextLong(random, activePeople + PERSON_ID_LEAD);  // PERSON_ID_LEAD = 10
+    //   return numPeople - activePeople + n;
+    //
+    // Upstream's PERSON_ID_LEAD of 10 is deliberately NOT used: it let auctions name sellers that
+    // did not exist yet, to model out-of-order arrival. Here every key already exists in the
+    // savepoint, so the lead would only widen the key range by 10 and make numActivePeople
+    // inexact. Sellers are drawn from exactly numActivePeople distinct keys (see below for where they start).
+    //
+    // The first Person that exists does NOT have base id 0. NexmarkQ3Job builds its generator with
+    // firstEventId = 1 and firstEventNumber = 1, and an event's id is firstEventId + firstEventNumber
+    // + its index, so the Persons in state have base ids 2, 3, 4, ... (ids 1002, 1003, ...). Drawing
+    // from [0, n) therefore named two sellers that never exist, so about 2/n of all lookups found
+    // nothing (measured: 0.0202% against 0.0200% predicted for n = 10 000). Draw from the range
+    // where Persons actually exist instead.
+    long domain = config.getNumActivePeople();
+    long draw = config.isZipfKeyDistribution()
+        // Skewed access: a few ids receive most draws. Domain and key range are unchanged, only the
+        // distribution over them differs, so the same savepoint remains valid.
+        ? config.getZipfSampler(domain).sampleId(random)
+        : LongGenerator.nextLong(random, domain);
+    return FIRST_PERSON_BASE0 + draw;
   }
+
+  /**
+   * Base id of the first Person in state: the Persons made by the Q3 job's build have base ids
+   * {@code FIRST_PERSON_BASE0 ... FIRST_PERSON_BASE0 + persons - 1}. See {@link #nextBase0PersonId}.
+   */
+  public static final long FIRST_PERSON_BASE0 = 2L;
 
   /**
    * Return the last valid person id (ignoring FIRST_PERSON_ID). Will be the current person id if

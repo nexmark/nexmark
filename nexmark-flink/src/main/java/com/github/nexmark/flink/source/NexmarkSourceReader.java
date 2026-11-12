@@ -27,6 +27,7 @@ import org.apache.flink.core.io.InputStatus;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.util.Preconditions;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -91,8 +92,15 @@ public class NexmarkSourceReader implements SourceReader<RowData, NexmarkSource.
 
     @Override
     public void addSplits(List<NexmarkSource.NexmarkSourceSplit> list) {
-        Preconditions.checkState(list.size() == 1, "Only one split supported for one reader");
+        Preconditions.checkState(!list.isEmpty(), "Expected at least one split.");
         Preconditions.checkState(sourceSplit == null, "We already have one split.");
+        // On a savepoint restore with decreased parallelism, several original splits land
+        // on a single reader. This job only needs an event stream (not an exact count), so
+        // run the first split and ignore the rest.
+        if (list.size() > 1) {
+            LoggerFactory.getLogger(NexmarkSourceReader.class)
+                    .warn("Reader received {} splits (parallelism decreased); using the first only.", list.size());
+        }
         sourceSplit = list.get(0);
         generator = new NexmarkGenerator(sourceSplit.getGeneratorConfig().reconfigure(config, config.isSourceIgnoreStop()), sourceSplit.getNumEmittedSoFar(), sourceSplit.getWallClockBaseTime());
     }

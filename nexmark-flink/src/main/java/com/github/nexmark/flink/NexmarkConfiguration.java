@@ -28,6 +28,8 @@ import java.util.Objects;
 
 public class NexmarkConfiguration implements Serializable {
 
+	private static final long serialVersionUID = -8649935098961372907L;
+
 	/**
 	 * Number of events to generate. If zero, generate as many as possible without overflowing
 	 * internal counters etc.
@@ -92,6 +94,23 @@ public class NexmarkConfiguration implements Serializable {
 
 	/** Average idealized size of a 'new person' event, in bytes. */
 	@JsonProperty public int avgPersonByteSize = 200;
+
+	/**
+	 * When true (stock Nexmark), the 'extra' padding field reuses slices of a shared 1 MB string
+	 * (highly compressible). When false, padding is freshly random per record (incompressible),
+	 * so on-disk state size tracks the configured record size.
+	 */
+	@JsonProperty public boolean compressibleExtra = true;
+
+	/**
+	 * How seller/bidder person ids are drawn from the numActivePeople keys that exist (the first numActivePeople Persons):
+	 * 'uniform' (stock behaviour, worst case for caching) or 'zipf' (a few hot keys receive most
+	 * lookups). Only applies when hotSellersRatio is 1.
+	 */
+	@JsonProperty public String keyDistribution = "uniform";
+
+	/** Zipf exponent used when keyDistribution is 'zipf'. Larger means more skew; 0.99 is the YCSB default. */
+	@JsonProperty public double zipfExponent = 0.99;
 
 	/** Average idealized size of a 'new auction' event, in bytes. */
 	@JsonProperty public int avgAuctionByteSize = 500;
@@ -179,6 +198,8 @@ public class NexmarkConfiguration implements Serializable {
 			auctionProportion == that.auctionProportion &&
 			bidProportion == that.bidProportion &&
 			avgPersonByteSize == that.avgPersonByteSize &&
+			keyDistribution.equals(that.keyDistribution) &&
+			Double.compare(zipfExponent, that.zipfExponent) == 0 &&
 			avgAuctionByteSize == that.avgAuctionByteSize &&
 			avgBidByteSize == that.avgBidByteSize &&
 			hotAuctionRatio == that.hotAuctionRatio &&
@@ -217,6 +238,8 @@ public class NexmarkConfiguration implements Serializable {
 			auctionProportion,
 			bidProportion,
 			avgPersonByteSize,
+			keyDistribution,
+			zipfExponent,
 			avgAuctionByteSize,
 			avgBidByteSize,
 			hotAuctionRatio,

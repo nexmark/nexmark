@@ -47,7 +47,16 @@ public class StringsGenerator {
 
   /** Return a random string of exactly {@code length}. */
   public static String nextExactString(SplittableRandom random, int length) {
-    if (REUSABLE_EXTRA_STRING != null && length < REUSABLE_EXTRA_STRING.length() / 2) {
+    return nextExactString(random, length, true);
+  }
+
+  /**
+   * Return a random string of exactly {@code length}. When {@code reuse} is true (stock Nexmark)
+   * a slice of a shared 1 MB string is returned - fast, but highly compressible. When false, every
+   * call generates fresh random characters (incompressible padding).
+   */
+  public static String nextExactString(SplittableRandom random, int length, boolean reuse) {
+    if (reuse && REUSABLE_EXTRA_STRING != null && length < REUSABLE_EXTRA_STRING.length() / 2) {
       int offset = random.nextInt(REUSABLE_EXTRA_STRING.length() - length);
       return REUSABLE_EXTRA_STRING.substring(offset, offset + length);
     }
@@ -72,6 +81,11 @@ public class StringsGenerator {
    * {@code averageSize}.
    */
   public static String nextExtra(SplittableRandom random, int currentSize, int desiredAverageSize) {
+    return nextExtra(random, currentSize, desiredAverageSize, true);
+  }
+
+  public static String nextExtra(
+      SplittableRandom random, int currentSize, int desiredAverageSize, boolean reuse) {
     if (currentSize > desiredAverageSize) {
       return "";
     }
@@ -79,6 +93,6 @@ public class StringsGenerator {
     int delta = (int) Math.round(desiredAverageSize * 0.2);
     int minSize = desiredAverageSize - delta;
     int desiredSize = minSize + (delta == 0 ? 0 : random.nextInt(2 * delta));
-    return nextExactString(random, desiredSize);
+    return nextExactString(random, desiredSize, reuse);
   }
 }
