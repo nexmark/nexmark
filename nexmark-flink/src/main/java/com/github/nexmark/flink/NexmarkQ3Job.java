@@ -22,6 +22,7 @@ import com.github.nexmark.flink.generator.GeneratorConfig;
 import com.github.nexmark.flink.generator.ZipfSampler;
 import com.github.nexmark.flink.model.Auction;
 import com.github.nexmark.flink.model.Event;
+import com.github.nexmark.flink.metric.RollingLatencyHistogram;
 import com.github.nexmark.flink.model.Person;
 import com.github.nexmark.flink.source.NexmarkSource;
 
@@ -42,9 +43,14 @@ import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction;
 import org.apache.flink.streaming.api.functions.sink.v2.DiscardingSink;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.core.state.StateFutureUtils;
+import org.apache.flink.metrics.Counter;
+import org.apache.flink.metrics.Histogram;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.ParameterTool;
 import org.apache.flink.util.function.ThrowingConsumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 
@@ -82,6 +88,7 @@ import java.time.Instant;
  *   --tps 0                Target events/s across all generators; 0 = maximum speed
  *   --key-dist uniform|zipf  How sellers are drawn from the working set (default uniform)
  *   --zipf-s 0.99          Zipf exponent for --key-dist zipf (larger = more skew)
+ *   --lookup-latency true  Record per-lookup async state latency (q3LookupLatencyUs histogram)
  *   --savepoint-persons N  Optional: Person count in the restored savepoint. In measure mode the
  *                          job fails fast if --working-set exceeds it
  * </pre>
@@ -111,6 +118,7 @@ public class NexmarkQ3Job {
         int     tpsArg        = params.getInt("tps", 0);
         String  keyDist       = params.get("key-dist", "uniform").toLowerCase();
         double  zipfS         = params.getDouble("zipf-s", 0.99);
+        boolean recordLatency = params.getBoolean("lookup-latency", true);
 
         // -- Argument validation (fail before submitting a job that would be invalid) --------
         int totalProp = personProp + auctionProp + bidProp;
@@ -181,6 +189,8 @@ public class NexmarkQ3Job {
                         cover[0], cover[1], cover[2], domain);
             }
         }
+        System.out.printf("  lookup latency  : %s%n",
+                recordLatency ? "recorded (q3LookupLatencyUs histogram)" : "off");
         if (hotSellers != 1) {
             System.out.println("  WARNING: --hot-sellers-ratio != 1; sellers no longer come from the "
                     + "fixed working-set window, so --working-set does not bound the key range.");
@@ -296,7 +306,15 @@ public class NexmarkQ3Job {
                 persons.keyBy(p -> p.id)
                        .connect(auctions.keyBy(a -> a.seller))
                        .enableAsyncState()
-                       .process(new Q3JoinFunction())
+                       .process(new Q3JoinFunction(String.format(
+                               "phase=%s workingSet=%d events=%d parallelism=%d proportions=%d:%d:%d "
+                                       + "hotSellers=%d personAvgSize=%d compressible=%s tps=%s savepointPersons=%d "
+                                       + "keyDist=%s%s",
+                               phase, workingSet, numEvents, parallelism, personProp, auctionProp,
+                               bidProp, hotSellers, personAvgSize, compressible,
+                               tpsArg > 0 ? tpsArg : "max", savepointPersons,
+                               keyDist, keyDist.equals("zipf") ? "(s=" + zipfS + ")" : ""),
+                               recordLatency))
                        .returns(resultType)
                        .name("Q3 Join (person - auction)")
                        .uid("q3-join");
@@ -334,9 +352,35 @@ public class NexmarkQ3Job {
             extends KeyedCoProcessFunction<Long, Person, Auction, Tuple2<Long, Long>> {
 
         private static final long serialVersionUID = 2L;
+        private static final Logger LOG = LoggerFactory.getLogger(Q3JoinFunction.class);
 
         private transient ValueState<Person> personState;
         private transient ListState<Auction> auctionState;
+
+        // Lookup accounting (exported by the metric reporter as operator metrics).
+        // In a valid measure run every seller is already in personState, so q3Misses must stay 0.
+        // A non-zero value means the run is invalid, e.g. --working-set exceeds the number of
+        // Persons in the restored savepoint, the savepoint is incomplete, or --hot-sellers-ratio != 1.
+        private transient Counter lookups;
+        private transient Counter hits;
+        private transient Counter misses;
+        private transient boolean missLogged;
+
+        /** Effective job configuration, logged by every subtask so it is visible in TaskManager logs. */
+        private final String configSummary;
+        private final boolean recordLatency;
+
+        /**
+         * Time from issuing {@code personState.asyncValue()} until its future completes, in
+         * microseconds. It is the latency the task sees for an async state read, which includes
+         * time queued behind other in-flight state requests, not only the storage access itself.
+         */
+        private transient Histogram lookupLatencyUs;
+
+        public Q3JoinFunction(String configSummary, boolean recordLatency) {
+            this.configSummary = configSummary;
+            this.recordLatency = recordLatency;
+        }
 
         @Override
         public void open(OpenContext openContext) throws Exception {
@@ -344,6 +388,16 @@ public class NexmarkQ3Job {
                     new ValueStateDescriptor<>("person", TypeInformation.of(Person.class)));
             auctionState = getRuntimeContext().getListState(
                     new ListStateDescriptor<>("auctions", TypeInformation.of(Auction.class)));
+            LOG.info("Q3JoinFunction subtask {}/{} starting: {}",
+                    getRuntimeContext().getTaskInfo().getIndexOfThisSubtask() + 1,
+                    getRuntimeContext().getTaskInfo().getNumberOfParallelSubtasks(), configSummary);
+            lookups = getRuntimeContext().getMetricGroup().counter("q3Lookups");
+            hits    = getRuntimeContext().getMetricGroup().counter("q3Hits");
+            misses  = getRuntimeContext().getMetricGroup().counter("q3Misses");
+            if (recordLatency) {
+                lookupLatencyUs = getRuntimeContext().getMetricGroup()
+                        .histogram("q3LookupLatencyUs", new RollingLatencyHistogram());
+            }
         }
 
         /**
@@ -372,11 +426,26 @@ public class NexmarkQ3Job {
         @Override
         public void processElement2(Auction auction, Context ctx,
                                     Collector<Tuple2<Long, Long>> out) throws Exception {
+            final long startNanos = recordLatency ? System.nanoTime() : 0L;
             personState.asyncValue().thenAccept(p -> {
-                if (p != null) {
-                    out.collect(Tuple2.of(p.id, auction.id));
+                if (recordLatency) {
+                    lookupLatencyUs.update((System.nanoTime() - startNanos) / 1_000L);
                 }
-                // else: seller unknown — drop auction (no state write)
+                lookups.inc();
+                if (p != null) {
+                    hits.inc();
+                    out.collect(Tuple2.of(p.id, auction.id));
+                } else {
+                    // Seller unknown: drop the auction (no state write). Expected never to happen
+                    // in a valid measure run, so count it and warn once per subtask.
+                    misses.inc();
+                    if (!missLogged) {
+                        missLogged = true;
+                        LOG.warn("Seller {} not found in personState (auction {}). The working set "
+                                + "likely exceeds the savepoint's Person count, or the savepoint is "
+                                + "incomplete. See metric q3Misses.", auction.seller, auction.id);
+                    }
+                }
             });
         }       
     }

@@ -57,6 +57,7 @@ The job reads options with Flink's `ParameterTool`. These are the defaults in
 | `--tps` | `tps`; `0` | Target total events/second across all generators. `0` (default) emits at maximum speed; negative values are rejected. Achieved throughput can be lower. |
 | `--key-dist` | `keyDist`; `uniform` | How sellers are drawn from the first `working-set` Persons that exist. `uniform` is the stock behavior and the worst case for caching. `zipf` makes a few keys receive most lookups, as in real workloads. Requires `--hot-sellers-ratio 1`. The key range is unchanged, so the same savepoint stays valid. |
 | `--zipf-s` | `zipfS`; `0.99` | Zipf exponent for `--key-dist zipf`. Larger means more skew; `0.99` is the YCSB default. Must be positive. |
+| `--lookup-latency` | `recordLatency`; `true` | Records the per-lookup async state latency histogram (`q3LookupLatencyUs`). Set `false` to switch it off. |
 | `--savepoint-persons` | `savepointPersons`; `0` | Optional guard for `--phase measure`: the number of Persons in the restored savepoint. If `--working-set` exceeds it, the job fails at startup instead of silently dropping auctions for missing sellers. `0` disables the check. |
 
 The default proportions `10:4:36` mean 20% Person, 8% Auction, and 72% Bid
@@ -69,7 +70,21 @@ The job rejects invalid arguments before submission: an unknown `--phase`, negat
 all-zero proportions, `--phase measure` with `--auction-proportion 0`, a negative `--tps`,
 and (when `--savepoint-persons` is given) a working set larger than the savepoint. The
 startup banner prints the expected Person count for a build run, and warns when
-`--hot-sellers-ratio` is not 1.
+`--hot-sellers-ratio` is not 1. Every join subtask also logs its effective configuration.
+
+The join operator exports three counters: `q3Lookups`, `q3Hits` and `q3Misses`. In a valid
+measure run every seller is already in `personState`, so `q3Misses` must be `0` and
+`q3Hits` equals `q3Lookups`. A non-zero `q3Misses` means the run is invalid (working set
+larger than the savepoint, incomplete savepoint, or `--hot-sellers-ratio` other than 1).
+
+**Lookup latency.** `q3LookupLatencyUs` is a histogram, in microseconds, of the time from issuing
+`personState.asyncValue()` until its future completes. The reporter exports quantiles (p50, p95,
+p99, ...) and a count. It is the latency the task observes, so it includes time queued behind other
+in-flight state requests and not only the storage access. Compare it across `--working-set` points
+to see where cache misses and HDFS reads start to dominate, and compare sync and async variants to
+see whether async access hides remote latency. Statistics cover the last 30 seconds (a log-bucketed
+histogram with about 3% precision), so a scrape every 15 s sees a meaningful window. If no lookups
+happened in the window, the quantiles read 0.
 
 **Key skew.** With `--key-dist zipf`, `--working-set` is the size of the key universe, not the
 effective working set: the startup banner prints how many keys receive 50%, 90% and 99% of lookups,
