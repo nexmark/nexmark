@@ -45,7 +45,7 @@ The job reads options with Flink's `ParameterTool`. These are the defaults in
 | --- | --- | --- |
 | `--events` | `numEvents`; `500000` | Maximum generated events across all event types. Passed to `NexmarkConfiguration` and `GeneratorConfig`. `0` is converted by `GeneratorConfig` to a very large limit, suitable for a run that the operator cancels. |
 | `--source-keep-alive` | `isSourceKeepAlive`; `false` | Keeps a bounded source running after it generates `--events` records, allowing a savepoint to capture the complete Person-only build. Leave it false for a normal finite job. |
-| `--working-set` | `workingSet`; `1000` | Assigned to `nexmarkConf.numActivePeople`. The modified `PersonGenerator.nextBase0PersonId` uses it when choosing seller IDs for Auctions. It changes the range of keys probed, not the number of Person records already present in a restored savepoint. The generator also adds a `PERSON_ID_LEAD` of 10 to its draw range, so the possible key range is slightly larger than this number. |
+| `--working-set` | `workingSet`; `1000` | Assigned to `nexmarkConf.numActivePeople`. The modified `PersonGenerator.nextBase0PersonId` uses it when choosing seller IDs for Auctions. It changes the range of keys probed, not the number of Person records already present in a restored savepoint. Sellers are drawn from exactly `working-set` distinct keys: the first `working-set` Persons that exist, base ids `2 .. working-set+1` (the Persons the build generates start at base id 2; drawing from `[0, working-set)` named two sellers that never exist, so about 2/working-set of lookups missed). Upstream Nexmark's `PERSON_ID_LEAD` of 10 (which let auctions name sellers that did not exist yet) is not used. |
 | `--parallelism` | `parallelism`; `1` | Sets the Flink environment and source parallelism and is copied to `numEventGenerators` for rate calculations. Keep the savepoint's parallelism and key-group compatibility in mind when restoring state. |
 | `--person-proportion` | `personProp`; `10` | Relative share of generated Person events. Assigned to `nexmarkConf.personProportion`; these events build state in build mode and are discarded before the join in measure mode. |
 | `--auction-proportion` | `auctionProp`; `4` | Relative share of Auction events. Assigned to `nexmarkConf.auctionProportion`; each generated Auction reaches the join and probes `personState`. |
@@ -53,12 +53,21 @@ The job reads options with Flink's `ParameterTool`. These are the defaults in
 | `--hot-sellers-ratio` | `hotSellers`; `1` | Controls `AuctionGenerator`'s hot-seller branch. At `1`, that branch is never selected and seller IDs are drawn from the fixed active range. Values above `1` favor a smaller set of hot sellers, changing the lookup distribution; that branch derives IDs from generated Person history rather than the fixed active range. |
 | `--person-avg-size` | `personAvgSize`; `200` | Target average generated Person size in bytes. Passed as `avgPersonByteSize`; the generator pads the Person's `extra` field, affecting state size per key. It is a target, not a guaranteed serialized state size. |
 | `--compressible-extra` | `compressible`; `true` | Controls whether generated Person padding is compressible. Passed as `compressibleExtra`; it can affect the stored state's compression and cache footprint. |
-| `--phase` | `measure`; default `build` | Only a value equal to `measure` (case insensitive) selects measure mode. Other values select build mode. The boolean controls Person filtering, source UID, and the job name. |
-| `--tps` | `tps`; `0` | Intended to pace generation when positive; `0` selects maximum emission speed. **Current code issue:** after assigning `firstEventRate` and `nextEventRate` from `tps`, it overwrites both with `10000`. Thus a positive `--tps` enables pacing but the configured rate is 10,000 events/second, not the supplied number. The rate is a generator setting; achieved throughput can be lower. |
+| `--phase` | `phase`; default `build` | `build` or `measure` (case insensitive). Any other value is rejected at startup. Selects Person filtering, the source UID, and the job name. |
+| `--tps` | `tps`; `0` | Target total events/second across all generators. `0` (default) emits at maximum speed; negative values are rejected. Achieved throughput can be lower. |
+| `--savepoint-persons` | `savepointPersons`; `0` | Optional guard for `--phase measure`: the number of Persons in the restored savepoint. If `--working-set` exceeds it, the job fails at startup instead of silently dropping auctions for missing sellers. `0` disables the check. |
 
 The default proportions `10:4:36` mean 20% Person, 8% Auction, and 72% Bid
 events.
 
+
+## Startup validation and metrics
+
+The job rejects invalid arguments before submission: an unknown `--phase`, negative or
+all-zero proportions, `--phase measure` with `--auction-proportion 0`, a negative `--tps`,
+and (when `--savepoint-persons` is given) a working set larger than the savepoint. The
+startup banner prints the expected Person count for a build run, and warns when
+`--hot-sellers-ratio` is not 1.
 
 ## Example invocation
 

@@ -78,6 +78,9 @@ import java.time.Instant;
  *   --hot-sellers-ratio 1  MUST be 1 so every seller goes through the fixed active window
  *   --person-proportion / --auction-proportion / --bid-proportion
  *   --person-avg-size 200  Bytes of padding per Person - inflate to grow per-key state
+ *   --tps 0                Target events/s across all generators; 0 = maximum speed
+ *   --savepoint-persons N  Optional: Person count in the restored savepoint. In measure mode the
+ *                          job fails fast if --working-set exceeds it
  * </pre>
  */
 public class NexmarkQ3Job {
@@ -93,7 +96,40 @@ public class NexmarkQ3Job {
         int     hotSellers    = params.getInt("hot-sellers-ratio", 1);
         int     personAvgSize = params.getInt("person-avg-size", 200);
         boolean compressible  = params.getBoolean("compressible-extra", true);
-        boolean measure       = params.get("phase", "build").equalsIgnoreCase("measure");
+        String  phase        = params.get("phase", "build").toLowerCase();
+        if (!phase.equals("build") && !phase.equals("measure")) {
+            // Previously any value other than "measure" silently selected build, so a typo such as
+            // "--phase mesure" would start a build job and add persons to a restored savepoint.
+            throw new IllegalArgumentException(
+                    "--phase must be 'build' or 'measure', got '" + params.get("phase") + "'");
+        }
+        boolean measure       = phase.equals("measure");
+        long    savepointPersons = params.getLong("savepoint-persons", 0L);   // optional guard
+        int     tpsArg        = params.getInt("tps", 0);
+
+        // -- Argument validation (fail before submitting a job that would be invalid) --------
+        int totalProp = personProp + auctionProp + bidProp;
+        if (personProp < 0 || auctionProp < 0 || bidProp < 0 || totalProp <= 0) {
+            throw new IllegalArgumentException("proportions must be non-negative and not all zero");
+        }
+        if (measure && auctionProp == 0) {
+            throw new IllegalArgumentException(
+                    "--phase measure needs --auction-proportion > 0: only auctions probe state");
+        }
+        if (tpsArg < 0) {
+            throw new IllegalArgumentException("--tps must be >= 0 (0 = maximum emit speed)");
+        }
+        // Sellers are the first working-set Persons that exist. Each must already exist in the savepoint.
+        if (workingSet < 1) {
+            throw new IllegalArgumentException("--working-set must be >= 1, got " + workingSet);
+        }
+        if (measure && savepointPersons > 0 && workingSet > savepointPersons) {
+            throw new IllegalArgumentException(
+                    "--working-set " + workingSet + " exceeds --savepoint-persons "
+                            + savepointPersons + ": some sellers would be missing from state");
+        }
+        // Expected Person count for a build run (exact when events is a multiple of the proportion sum)
+        long expectedPersons = numEvents > 0 ? numEvents * personProp / totalProp : -1L;
 
         System.out.println("=======================================================");
         System.out.println("  Nexmark Q3 - Java DataStream (working-set experiment)");
@@ -106,6 +142,19 @@ public class NexmarkQ3Job {
         System.out.printf("  hot-sellers-ratio: %d%n", hotSellers);
         System.out.printf("  person-avg-size : %d bytes%n", personAvgSize);
         System.out.printf("  compressible-extra: %s%n", compressible);
+        System.out.printf("  tps             : %s%n", tpsArg > 0 ? String.valueOf(tpsArg) : "max");
+        if (measure) {
+            System.out.printf("  sellers probed  : ids [0, %d) (= working-set)%n", (long) workingSet);
+            System.out.printf("  savepoint-persons: %s%n",
+                    savepointPersons > 0 ? String.valueOf(savepointPersons) : "not given (no bounds check)");
+        } else {
+            System.out.printf("  expected persons: %s%n",
+                    expectedPersons >= 0 ? String.format("%,d", expectedPersons) : "unbounded (events=0)");
+        }
+        if (hotSellers != 1) {
+            System.out.println("  WARNING: --hot-sellers-ratio != 1; sellers no longer come from the "
+                    + "fixed working-set window, so --working-set does not bound the key range.");
+        }
         System.out.println("=======================================================");
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -118,7 +167,7 @@ public class NexmarkQ3Job {
         // Keep a bounded build source running after it emits its requested events,
         // so a savepoint can include every generated Person before the job exits.
         nexmarkConf.isSourceKeepAlive  = params.getBoolean("source-keep-alive", false);
-        int tps = params.getInt("tps", 0);
+        int tps = tpsArg;
         if (tps > 0) {
             nexmarkConf.maxEmitSpeed = false;
             nexmarkConf.firstEventRate = tps;
